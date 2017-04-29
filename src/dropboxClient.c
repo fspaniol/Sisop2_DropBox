@@ -63,7 +63,10 @@ void get_file(char *file, int socket){
 
 // Fecha a conexão com o servidor.
 
-void close_connection(){
+void close_connection(int socket){
+    
+	printf("Conexao encerrada\n");
+    close(socket);
     
 }
 
