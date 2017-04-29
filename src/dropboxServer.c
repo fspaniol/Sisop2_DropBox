@@ -11,8 +11,29 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <time.h> 
 
 #include "../include/dropboxServer.h"
+#include "dropboxUtil.c"
+
+//Cria o socket do servidor
+
+int criaSocketServidor(char *host, int port){
+	int socketServidor;
+	struct sockaddr_in enderecoServidor;
+
+	//Primeiro parametro indica qual o dominio da internet, nesse caso IPV4
+	//Segundo parametro indica que estaremos usando TCP, ao inves de UDP
+	//Terceiro parametro fala pro SO usar o protocolo padrão
+	socketServidor = socket(PF_INET, SOCK_STREAM, 0);
+
+	enderecoServidor = retornaEndereco(host,port);
+
+	bind(socketServidor, (struct sockaddr *) &enderecoServidor, sizeof(enderecoServidor)); // Conecta o socket com o endereço do servidor
+
+
+	return socketServidor;
+}
 
 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 
@@ -22,13 +43,21 @@ void sync_server(){
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
-void receive_file(char *file){
+void receive_file(char *file, int socket){
     
 }
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
-void send_file(char *file){
+void send_file(char *file, int socket){
+
+	char buffer[1024];
+	time_t ticks;
+
+	ticks = time(NULL);
+
+	strcpy(buffer,("%.24s \n", ctime(&ticks)));
+	send(socket,buffer,sizeof(buffer),0);
     
 }
 
@@ -36,42 +65,26 @@ void send_file(char *file){
 
 int main(){
     
-  int welcomeSocket, newSocket;
-  char buffer[1024];
-  struct sockaddr_in serverAddr;
-  struct sockaddr_storage serverStorage;
-  socklen_t addr_size;
+  int socketServidor, novoSocket;
+  struct sockaddr_storage depositoServidor;
+  socklen_t tamanhoEndereco;
 
-  /*---- Create the socket. The three arguments are: ----*/
-  /* 1) Internet domain 2) Stream socket 3) Default protocol (TCP in this case) */
-  welcomeSocket = socket(PF_INET, SOCK_STREAM, 0);
-  
-  /*---- Configure settings of the server address struct ----*/
-  /* Address family = Internet */
-  serverAddr.sin_family = AF_INET;
-  /* Set port number, using htons function to use proper byte order */
-  serverAddr.sin_port = htons(7891);
-  /* Set IP address to localhost */
-  serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  /* Set all bits of the padding field to 0 */
-  memset(serverAddr.sin_zero, '\0', sizeof serverAddr.sin_zero);  
+  socketServidor = criaSocketServidor("127.0.0.1", 4200);
 
-  /*---- Bind the address struct to the socket ----*/
-  bind(welcomeSocket, (struct sockaddr *) &serverAddr, sizeof(serverAddr));
+  // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
+  // O segundo parametro do listen diz quantas conexões podemos ter
 
-  /*---- Listen on the socket, with 5 max connection requests queued ----*/
-  if(listen(welcomeSocket,5)==0)
-    printf("Listening\n");
-  else
-    printf("Error\n");
+  while (1){
 
-  /*---- Accept call creates a new socket for the incoming connection ----*/
-  addr_size = sizeof serverStorage;
-  newSocket = accept(welcomeSocket, (struct sockaddr *) &serverStorage, &addr_size);
+  	printf("Servidor esperando algum cliente... \n");
 
-  /*---- Send message to the socket of the incoming connection ----*/
-  strcpy(buffer,"Hello World\n");
-  send(newSocket,buffer,13,0);
+  	listen(socketServidor,10);
+
+  	tamanhoEndereco = sizeof depositoServidor;
+  	novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
+
+  	send_file(NULL,novoSocket);
+}
 
   return 0;
 }

@@ -14,5 +14,9 @@
 #define MAXFILES 10
 
 #include <stdio.h>
+#include "dropboxClient.h"
+#include "dropboxServer.h"
+
+struct sockaddr_in retornaEndereco(char *host, int port); // Cria o endereco do servidor
 
 #endif /* dropboxUtil_h */
