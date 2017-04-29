@@ -10,6 +10,7 @@
 #define dropboxClient_h
 
 #include <stdio.h>
+#include "dropboxUtil.h"
 
 int connect_server(char *host, int port); // Conecta o cliente com o servidor, host - endereço do servidor, port - porta aguardando conexão
 
