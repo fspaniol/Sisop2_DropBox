@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "../include/dropboxClient.h"
 #include "../include/dropboxUtil.h"
@@ -65,7 +66,7 @@ void get_file(char *file, int socket){
 
 void close_connection(int socket){
     
-	printf("Conexao encerrada\n");
+	printf("\n Conexao encerrada\n");
     close(socket);
     
 }
@@ -74,8 +75,36 @@ void close_connection(int socket){
 int main(){
 
   	int socketCliente = connect_server("127.0.0.1", 4200);
-	get_file(NULL, socketCliente);
-	close_connection();  
+  	int opcao = 1;
+  	int opcao_convertida;
+
+  	while (opcao != 0){
+
+  		puts("\n\n Qual operacao deseja realizar?");
+  		puts("Digite 1 para sincronizar seu diretorio");
+  		puts("Digite 2 para enviar um arquivo para o servidor");
+  		puts("Digite 3 para receber um arquivo do servidor");
+  		puts("Digite 0 para desconectar-se do dropbox");
+  		printf("Sua escolha eh: ");
+
+  		scanf("%d", &opcao);
+  		opcao_convertida = htonl(opcao);
+
+
+  		send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0); // Informa o servidor qual a opção que ele vai realizar
+
+  		switch(opcao) {
+  			case 1: sync_client();
+  					  break;
+  			case 2: send_file(NULL,socketCliente);
+  					  break;
+  			case 3: get_file(NULL, socketCliente);
+  					  break;
+  			case 0: close_connection(socketCliente);
+
+  		}
+
+  	}
 
   return 0;
 }

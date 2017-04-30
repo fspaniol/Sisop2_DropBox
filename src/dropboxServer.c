@@ -68,6 +68,7 @@ int main(){
   int socketServidor, novoSocket;
   struct sockaddr_storage depositoServidor;
   socklen_t tamanhoEndereco;
+  int opcao_recebida = 1;
 
   socketServidor = criaSocketServidor("127.0.0.1", 4200);
 
@@ -78,12 +79,32 @@ int main(){
 
   	printf("Servidor esperando algum cliente... \n");
 
-  	listen(socketServidor,10);
+  	if ((listen(socketServidor,10)) != 0){
+  		printf("Servidor cheio, tente mais tarde \n");
+  	}
 
   	tamanhoEndereco = sizeof depositoServidor;
   	novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
 
-  	send_file(NULL,novoSocket);
+  	while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
+
+  		recv(novoSocket, &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
+  		opcao_recebida = htonl(opcao_recebida);
+
+  		switch(opcao_recebida) {
+  			case 1: sync_server();
+  					  break;
+  			case 2: receive_file(NULL, novoSocket);
+  					  break;
+  			case 3: send_file(NULL,novoSocket);
+  					  break;
+  			case 0: printf("Cliente desconectado \n");
+  					break;
+  		}
+
+  	}
+
+
 }
 
   return 0;
