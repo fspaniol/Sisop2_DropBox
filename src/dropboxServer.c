@@ -12,16 +12,16 @@
 #include <netinet/in.h>
 #include <string.h>
 #include <time.h>
-#include <fcntl.h> /* open, O_RDONLY */
-#include <unistd.h> /* close, read */
-#include <arpa/inet.h>  /* sockaddr_in, inet_ntop */
+#include <fcntl.h> 
+#include <unistd.h> 
+#include <arpa/inet.h>  
 
 
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
 
-#define MAX_RECV_BUF 256
-#define MAX_SEND_BUF 256
+#define TAM_MAX_RECEBER 256
+#define TAM_MAX_ENVIO 256
 
 //Cria o socket do servidor
 
@@ -52,21 +52,22 @@ void sync_server(){
 
 void receive_file(char *file, int socket){
     printf("Entrou no receive\n");
-    char recv_str[MAX_RECV_BUF]; /* to store received string */
-    ssize_t rcvd_bytes; /* bytes received from socket */
+    char stringReceber[TAM_MAX_RECEBER]; /* para guardar a string */
+    ssize_t bytesRecebidos; /* bytes recebidos do socket */
     
-    /* read name of requested file from socket */
-    if ((rcvd_bytes = recv(socket, recv_str, MAX_RECV_BUF, 0)) < 0) {
+    /* Le o nome do arquivo solicitado do socket*/
+    if ((bytesRecebidos = recv(socket, stringReceber, TAM_MAX_RECEBER, 0)) < 0) {
         perror("Erro tentando recuperar");
         return;
     }
-    sscanf (recv_str, "%s\n", file); /* discard CR/LF */
+    sscanf (stringReceber, "%s\n", file); 
     
 }
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
 void send_file(char *file, int socket){
+
     printf("Entrou no send\n");
     
     /*char buffer[1024];
@@ -79,37 +80,36 @@ void send_file(char *file, int socket){
      
      CODIGO DO FEFEZUDO*/
     
-    int sent_count; /* how many sending chunks, for debugging */
-    ssize_t read_bytes, /* bytes read from local file */ sent_bytes, /* bytes sent to connected socket */ sent_file_size;
-    char send_buf[MAX_SEND_BUF]; /* max chunk size for sending file */
-    char *errmsg_notfound = "Arquivo nao encontrado\n";
-    int f; /* file handle for reading local file*/
-    sent_count = 0;
-    sent_file_size = 0;
+    int quantidadeEnviada; // quantidade enviada
+    ssize_t bytesLidos, /* bytes lidos do arquivo local */ bytesEnviados, /* bytes enviados para o socket conectado */ tamanhoArquivoEnviado;
+    char arquivoBytesEnvio[TAM_MAX_ENVIO]; /* tamanho maximo para o arquivo de envio */
+    char *mensagemErroDeArquivo = "Arquivo nao encontrado\n";
+    int f; /* para manipular o arquivo */
+    quantidadeEnviada = 0;
+    tamanhoArquivoEnviado = 0;
     
-    /* attempt to open requested file for reading */
-    if((f = open(file, O_RDONLY)) < 0) /* can't open requested file */ {
+    /* tentativa de abrir o arquivo */
+    if((f = open(file, O_RDONLY)) < 0) /* erro */ {
         perror(file);
-        if((sent_bytes = send(socket, errmsg_notfound, strlen(errmsg_notfound), 0)) < 0)
+        if((bytesEnviados = send(socket, mensagemErroDeArquivo, strlen(mensagemErroDeArquivo), 0)) < 0)
         {
-            printf("Send error");
+            printf("Erro de envio");
             return;
         } }
-    else /* open file successful */ {
+    else /* sucesso ao abrir o arquivo */ {
         printf("Enviando: %s\n", file);
-        while( (read_bytes = read(f, send_buf, MAX_RECV_BUF)) > 0 ) {
-            if( (sent_bytes = send(socket, send_buf, read_bytes, 0)) < read_bytes )
+        while( (bytesLidos = read(f, arquivoBytesEnvio, TAM_MAX_RECEBER)) > 0 ) {
+            if( (bytesEnviados = send(socket, arquivoBytesEnvio, bytesLidos, 0)) < bytesLidos)
             {
                 printf("Erro ao enviar");
                 return;
             }
-            sent_count++;
-            sent_file_size += sent_bytes;
+            quantidadeEnviada++;
+            tamanhoArquivoEnviado += bytesEnviados;
         }
         close(f);
     }
-    printf("%zd bytes enviados de %d\n\n", sent_file_size, sent_count);
-    //return sent_count;
+    printf("%zd bytes enviados de %d\n\n", tamanhoArquivoEnviado, quantidadeEnviada);
     return;
     
 }
