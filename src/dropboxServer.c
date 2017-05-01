@@ -51,17 +51,26 @@ void sync_server(){
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
 void receive_file(char *file, int socket){
-    printf("Entrou no receive\n");
-    char stringReceber[TAM_MAX_RECEBER]; /* para guardar a string */
-    ssize_t bytesRecebidos; /* bytes recebidos do socket */
-    
-    /* Le o nome do arquivo solicitado do socket*/
-    if ((bytesRecebidos = recv(socket, stringReceber, TAM_MAX_RECEBER, 0)) < 0) {
-        perror("Erro tentando recuperar");
-        return;
-    }
-    sscanf (stringReceber, "%s\n", file); 
-    
+   	puts ("\n\n Vou receber o arquivo enviado pelo cliente ");
+    char bufferReceber[TAM_MAX_RECEBER]; // Buffer que armazena os pacotes que vem sido recebidos
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+    int handler; // Inteiro para manipulação do arquivo que botaremos no servidor
+
+    handler = open(file, O_CREAT | O_WRONLY);
+
+
+    while ((bytesRecebidos = recv(socket, bufferReceber, TAM_MAX_RECEBER, 0)) > 0){ 
+    	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+       		puts("Erro tentando receber algum pacote do cliente");
+    	}
+
+    	write(handler,bufferReceber,sizeof(bufferReceber)); // Escreve no arquivo
+
+    	if(bytesRecebidos < TAM_MAX_RECEBER){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+    		close(handler);
+    		return;
+    	}
+    }    
 }
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
@@ -70,7 +79,7 @@ void send_file(char *file, int socket){
 
     printf("Entrou no send\n");
     
-    /*char buffer[1024];
+    char buffer[1024];
      time_t ticks;
      
      ticks = time(NULL);
@@ -78,39 +87,7 @@ void send_file(char *file, int socket){
      strcpy(buffer,("%.24s \n", ctime(&ticks)));
      send(socket,buffer,sizeof(buffer),0);
      
-     CODIGO DO FEFEZUDO*/
-    
-    int quantidadeEnviada; // quantidade enviada
-    ssize_t bytesLidos, /* bytes lidos do arquivo local */ bytesEnviados, /* bytes enviados para o socket conectado */ tamanhoArquivoEnviado;
-    char arquivoBytesEnvio[TAM_MAX_ENVIO]; /* tamanho maximo para o arquivo de envio */
-    char *mensagemErroDeArquivo = "Arquivo nao encontrado\n";
-    int f; /* para manipular o arquivo */
-    quantidadeEnviada = 0;
-    tamanhoArquivoEnviado = 0;
-    
-    /* tentativa de abrir o arquivo */
-    if((f = open(file, O_RDONLY)) < 0) /* erro */ {
-        perror(file);
-        if((bytesEnviados = send(socket, mensagemErroDeArquivo, strlen(mensagemErroDeArquivo), 0)) < 0)
-        {
-            printf("Erro de envio");
-            return;
-        } }
-    else /* sucesso ao abrir o arquivo */ {
-        printf("Enviando: %s\n", file);
-        while( (bytesLidos = read(f, arquivoBytesEnvio, TAM_MAX_RECEBER)) > 0 ) {
-            if( (bytesEnviados = send(socket, arquivoBytesEnvio, bytesLidos, 0)) < bytesLidos)
-            {
-                printf("Erro ao enviar");
-                return;
-            }
-            quantidadeEnviada++;
-            tamanhoArquivoEnviado += bytesEnviados;
-        }
-        close(f);
-    }
-    printf("%zd bytes enviados de %d\n\n", tamanhoArquivoEnviado, quantidadeEnviada);
-    return;
+     /*CODIGO DO FEFEZUDO*/
     
 }
 
@@ -149,13 +126,14 @@ int main(){
             switch(opcao_recebida) {
                 case 1: sync_server();
                     break;
-                case 2: receive_file(NULL, novoSocket);
+                case 2: receive_file("recebido.txt", novoSocket);
                     break;
                 case 3: send_file(NULL,novoSocket);
                     break;
                 case 0: printf("Cliente desconectado \n");
                     break;
             }
+            opcao_recebida = 5;
             
         }
         

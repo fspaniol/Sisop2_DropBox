@@ -10,11 +10,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <stdint.h>
+#include <fcntl.h> 
+#include <unistd.h> 
+#include <arpa/inet.h>  
 
 #include "../include/dropboxClient.h"
-#include "../include/dropboxUtil.h"
 #include "dropboxUtil.c"
+
+
+#define TAM_MAX_RECEBER 256
+#define TAM_MAX_ENVIO 256
 
 // Conecta o cliente com o servidor
 // Host - endereço do servidor
@@ -49,7 +54,35 @@ void sync_client(){
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
 void send_file(char *file, int socket){
-    
+
+    puts("\n\n Entrei na função de enviar arquivos para o servidor");
+
+    int handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
+    ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
+    ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
+    ssize_t tamanhoArquivoEnviado = 0;
+    char bufferEnvio[TAM_MAX_ENVIO]; // Buffer que armazena os pacotes para enviar
+    int qtdePacotes = 0;
+
+    if ((handler = open(file, O_RDONLY)) < 0){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
+        puts("Erro ao abrir o arquivo"); // Nem precisa informar o servidor, creio eu
+    }
+    else{
+
+        while ((bytesLidos = read(handler, bufferEnvio, TAM_MAX_ENVIO-1)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+            if ((bytesEnviados = send(socket,bufferEnvio,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+                puts("Deu erro ao enviar o arquivo");
+                return;
+            }
+            qtdePacotes++;
+            tamanhoArquivoEnviado += bytesEnviados;
+        }
+    }
+
+    close(handler);
+
+
+    printf("Foram enviados %zd bytes em %d pacotes de tamanho %d", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX_ENVIO);
 }
 
 // Obtém um arquivo file do servidor
@@ -96,7 +129,7 @@ int main(){
         switch(opcao) {
             case 1: sync_client();
                 break;
-            case 2: send_file(NULL,socketCliente);
+            case 2: send_file("teste.txt",socketCliente);
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;
