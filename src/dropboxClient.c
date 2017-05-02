@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -54,7 +55,7 @@ void sync_client(){
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
 void send_file(char *file, int socket){
-
+    
     puts("\n\n Entrei na função de enviar arquivos para o servidor");
 
     int handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
@@ -85,6 +86,26 @@ void send_file(char *file, int socket){
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX_ENVIO);
 }
 
+char *get_file_name(){
+    /*
+    char filename[100];
+
+    printf("Entre com o nome do arquivo: \n");
+    fgets(filename, sizeof(filename), stdin);
+
+    printf("filename: %s\n", filename);
+
+    return filename;*/
+
+    char data[56];
+    fpurge(stdin);
+    printf("Digite o nome do arquivo: ");
+    fgets(data, sizeof(data), stdin);
+    printf("Arquivo escolhido: %s\n", data);
+    return data;
+
+}
+
 // Obtém um arquivo file do servidor
 // Deverá ser executada quando for realizar download de um arquivo, file -filename.ext
 
@@ -110,7 +131,7 @@ int main(){
     int socketCliente = connect_server("127.0.0.1", 4200);
     int opcao = 1;
     int opcao_convertida;
-    
+
     while (opcao != 0){
         
         puts("\n\n Qual operacao deseja realizar?");
@@ -129,7 +150,8 @@ int main(){
         switch(opcao) {
             case 1: sync_client();
                 break;
-            case 2: send_file("teste.txt",socketCliente);
+            case 2:
+                send_file(get_file_name(), socketCliente);
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;
