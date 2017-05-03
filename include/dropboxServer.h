@@ -22,7 +22,7 @@ struct file_info{
 struct Client{
     int devices[2];                 // Associado aos dispositivos do usuário
     char userid[MAXNAME];           // Id do usuário no servidor, que deverá ser único. Informado pela linha de comando
-    struct file_info;//[MAXFILES]   // Metadados de cada arquivo que o cliente possui no servidor
+    struct file_info files[MAXFILES]; // Metadados de cada arquivo que o cliente possui no servidor
     int logged_in;                  // Cliente está logado ou não
 };
 

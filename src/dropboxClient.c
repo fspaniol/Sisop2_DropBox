@@ -19,8 +19,8 @@
 #include "dropboxUtil.c"
 
 
-#define TAM_MAX_RECEBER 256
-#define TAM_MAX_ENVIO 256
+#define TAM_MAX_RECEBER 1024
+#define TAM_MAX_ENVIO 1024
 
 // Conecta o cliente com o servidor
 // Host - endereço do servidor
@@ -54,53 +54,48 @@ void sync_client(){
 // Envia um arquivo file para o servidor
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
-void send_file(char *file, int socket){
+void send_file(char file[], int socket){
     
     puts("\n\n Entrei na função de enviar arquivos para o servidor");
 
-    int handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
+    FILE* handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
     ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
     ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
     ssize_t tamanhoArquivoEnviado = 0;
     char bufferEnvio[TAM_MAX_ENVIO]; // Buffer que armazena os pacotes para enviar
     int qtdePacotes = 0;
 
-    if ((handler = open(file, O_RDONLY)) < 0){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
+
+    bzero(bufferEnvio, TAM_MAX_ENVIO);
+
+    if ((handler = fopen(file, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
         puts("Erro ao abrir o arquivo"); // Nem precisa informar o servidor, creio eu
     }
     else{
-
-        while ((bytesLidos = read(handler, bufferEnvio, TAM_MAX_ENVIO-1)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+        while ((bytesLidos = fread(bufferEnvio, 1,sizeof(bufferEnvio), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+            printf("\n Bytes Lidos: %zd \n", bytesLidos);
             if ((bytesEnviados = send(socket,bufferEnvio,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
                 puts("Deu erro ao enviar o arquivo");
                 return;
             }
+            bzero(bufferEnvio, TAM_MAX_ENVIO);
             qtdePacotes++;
             tamanhoArquivoEnviado += bytesEnviados;
         }
     }
 
-    close(handler);
+    fclose(handler);
 
 
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX_ENVIO);
 }
 
-char *get_file_name(){
-    /*
-    char filename[100];
+char* get_file_name(){
 
-    printf("Entre com o nome do arquivo: \n");
-    fgets(filename, sizeof(filename), stdin);
-
-    printf("filename: %s\n", filename);
-
-    return filename;*/
-
-    char data[56];
+    char* data;
     fpurge(stdin);
     printf("Digite o nome do arquivo: ");
-    fgets(data, sizeof(data), stdin);
+    fgets(data,50,stdin);
     printf("Arquivo escolhido: %s\n", data);
     return data;
 
@@ -126,11 +121,18 @@ void close_connection(int socket){
 }
 
 
-int main(){
+int main(int argc, char *argv[]){
     
-    int socketCliente = connect_server("127.0.0.1", 4200);
+    int socketCliente;
     int opcao = 1;
     int opcao_convertida;
+
+    if (argc < 2) {
+        printf("Por favor inserir o valor do IP pelo qual deseja se conectar... \n");
+        exit(0);
+    }
+
+    socketCliente = connect_server(argv[1],50000);
 
     while (opcao != 0){
         
@@ -151,7 +153,7 @@ int main(){
             case 1: sync_client();
                 break;
             case 2:
-                send_file(get_file_name(), socketCliente);
+                send_file("teste.txt", socketCliente);
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;

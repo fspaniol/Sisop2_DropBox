@@ -20,8 +20,8 @@
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
 
-#define TAM_MAX_RECEBER 256
-#define TAM_MAX_ENVIO 256
+#define TAM_MAX_RECEBER 1024
+#define TAM_MAX_ENVIO 1024
 
 //Cria o socket do servidor
 
@@ -54,9 +54,10 @@ void receive_file(char *file, int socket){
    	puts ("\n\n Vou receber o arquivo enviado pelo cliente ");
     char bufferReceber[TAM_MAX_RECEBER]; // Buffer que armazena os pacotes que vem sido recebidos
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
-    int handler; // Inteiro para manipulação do arquivo que botaremos no servidor
+    FILE* handler; // Inteiro para manipulação do arquivo que botaremos no servidor
+    bzero(bufferReceber, TAM_MAX_ENVIO);
 
-    handler = open(file, O_CREAT | O_WRONLY);
+    handler = fopen(file, "w");
 
 
     while ((bytesRecebidos = recv(socket, bufferReceber, TAM_MAX_RECEBER, 0)) > 0){ 
@@ -64,10 +65,12 @@ void receive_file(char *file, int socket){
        		puts("Erro tentando receber algum pacote do cliente");
     	}
 
-    	write(handler,bufferReceber,sizeof(bufferReceber)); // Escreve no arquivo
+    	fwrite(bufferReceber, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+        bzero(bufferReceber, TAM_MAX_ENVIO);
 
     	if(bytesRecebidos < TAM_MAX_RECEBER){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
-    		close(handler);
+    		fclose(handler);
     		return;
     	}
     }    
@@ -102,7 +105,7 @@ int main(){
     socklen_t tamanhoEndereco;
     int opcao_recebida = 1;
     
-    socketServidor = criaSocketServidor("127.0.0.1", 4200);
+    socketServidor = criaSocketServidor("127.0.0.1", 50000);
     
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter
