@@ -20,8 +20,7 @@
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
 
-#define TAM_MAX_RECEBER 1024
-#define TAM_MAX_ENVIO 1024
+#define TAM_MAX 1024
 
 //Cria o socket do servidor
 
@@ -50,26 +49,42 @@ void sync_server(){
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
-void receive_file(char *file, int socket){
-   	puts ("\n\n Vou receber o arquivo enviado pelo cliente ");
-    char bufferReceber[TAM_MAX_RECEBER]; // Buffer que armazena os pacotes que vem sido recebidos
-    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+void receive_file(int socket){
+   	puts ("\n Vou receber o arquivo enviado pelo cliente \n");
+    char buffer[TAM_MAX]; // Buffer que armazena os pacotes que vem sido recebidos
+    ssize_t bytesRecebidos = 0; // Quantidade de bytes que foram recebidos numa passagem
+    ssize_t bytesEnviados; 
     FILE* handler; // Inteiro para manipulação do arquivo que botaremos no servidor
-    bzero(bufferReceber, TAM_MAX_ENVIO);
+    bzero(buffer, TAM_MAX);
+    int flag = 1;
+    flag = htonl(flag);
 
-    handler = fopen(file, "w");
+    while((bytesRecebidos = recv(socket,buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    }
 
+    printf("O arquivo a ser enviado pelo cliente eh: %s \n\n", buffer); // Escreve o nome do arquivo
+    
+    if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+        puts("Erro ao enviar o aval ao cliente de que recebi o nome do arquivo... "); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
+        return;
+    }
 
-    while ((bytesRecebidos = recv(socket, bufferReceber, TAM_MAX_RECEBER, 0)) > 0){ 
+    bytesRecebidos = 0; // Reseta o numero de bytes lidos
+
+    handler = fopen(buffer, "w"); // Abre o arquivo 
+
+    bzero(buffer, TAM_MAX); // Reseta o buffer
+
+    while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
     	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
        		puts("Erro tentando receber algum pacote do cliente");
     	}
 
-    	fwrite(bufferReceber, 1,bytesRecebidos, handler); // Escreve no arquivo
+    	fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
 
-        bzero(bufferReceber, TAM_MAX_ENVIO);
+        bzero(buffer, TAM_MAX); // Reseta o buffer
 
-    	if(bytesRecebidos < TAM_MAX_RECEBER){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+    	if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
     		fclose(handler);
     		return;
     	}
@@ -78,9 +93,9 @@ void receive_file(char *file, int socket){
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
-void send_file(char *file, int socket){
+void send_file_servidor(int socket){
 
-    printf("Entrou no send\n");
+    /*printf("Entrou no send\n");
     
     char buffer[1024];
      time_t ticks;
@@ -90,8 +105,35 @@ void send_file(char *file, int socket){
      strcpy(buffer,("%.24s \n", ctime(&ticks)));
      send(socket,buffer,sizeof(buffer),0);
      
-     /*CODIGO DO FEFEZUDO*/
-    
+     CODIGO DO FEFEZUDO*/
+
+    puts ("\n Vou receber o nome do arquivo que o cliente deseja.... ");
+
+    char buffer[TAM_MAX];
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+    ssize_t bytesLidos;
+    ssize_t bytesEnviados;
+    FILE* handler;
+
+    bzero(buffer,TAM_MAX);
+
+    bytesRecebidos = recv(socket, buffer, TAM_MAX, 0); // recebe o nome do arquivo que o cliente quer receber
+    if (bytesRecebidos < 0)
+        puts("Erro ao receber o nome do arquivo que deve ser enviado");
+    else
+        printf("\n O arquivo que o cliente deseja eh %s \n\n", buffer); // Escreve o nome do arquivo que o cliente quer
+
+    handler = fopen(buffer,"r");
+
+    while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+        if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+            puts("Deu erro ao enviar o arquivo");
+            return;
+        }
+        bzero(buffer, TAM_MAX); // Reseta o buffer
+    }
+
+    fclose(handler);
 }
 
 
@@ -122,6 +164,8 @@ int main(){
         novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
         
         while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
+
+            //puts("Estou esperando acao de algum cliente... \n");
             
             recv(novoSocket, &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
             opcao_recebida = htonl(opcao_recebida);
@@ -129,9 +173,9 @@ int main(){
             switch(opcao_recebida) {
                 case 1: sync_server();
                     break;
-                case 2: receive_file("recebido.txt", novoSocket);
+                case 2: receive_file(novoSocket);
                     break;
-                case 3: send_file(NULL,novoSocket);
+                case 3: send_file_servidor(novoSocket);
                     break;
                 case 0: printf("Cliente desconectado \n");
                     break;

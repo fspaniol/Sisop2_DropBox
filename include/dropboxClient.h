@@ -16,7 +16,7 @@ int connect_server(char *host, int port); // Conecta o cliente com o servidor, h
 
 void sync_client();                       // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
-void send_file(char *file, int socket);               // Envia um arquivo file para o servidor. Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
+void send_file_cliente(char *file, int socket);               // Envia um arquivo file para o servidor. Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
 void get_file(char *file, int socket);                // Obtém um arquivo file do servidor. Deverá ser executada quando for realizar download de um arquivo, file -filename.ext
 

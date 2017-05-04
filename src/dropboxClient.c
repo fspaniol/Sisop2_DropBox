@@ -19,8 +19,7 @@
 #include "dropboxUtil.c"
 
 
-#define TAM_MAX_RECEBER 1024
-#define TAM_MAX_ENVIO 1024
+#define TAM_MAX 1024
 
 // Conecta o cliente com o servidor
 // Host - endereço do servidor
@@ -54,7 +53,7 @@ void sync_client(){
 // Envia um arquivo file para o servidor
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
-void send_file(char file[], int socket){
+void send_file_cliente(char file[], int socket){
     
     puts("\n\n Entrei na função de enviar arquivos para o servidor");
 
@@ -62,23 +61,32 @@ void send_file(char file[], int socket){
     ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
     ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
     ssize_t tamanhoArquivoEnviado = 0;
-    char bufferEnvio[TAM_MAX_ENVIO]; // Buffer que armazena os pacotes para enviar
+    char buffer[TAM_MAX]; // Buffer que armazena os pacotes para enviar
     int qtdePacotes = 0;
+    int avalServidor = 0;
 
+    if ((bytesEnviados = send(socket,"recebido.txt",sizeof("recebido.txt"),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
+        puts("Deu erro ao enviar o nome do arquivo para o servidor");
+        return;
+    }
 
-    bzero(bufferEnvio, TAM_MAX_ENVIO);
+    bzero(buffer, TAM_MAX); // Limpa o buffer
+
+    while(avalServidor == 0){
+        recv(socket,&avalServidor,sizeof(avalServidor),0); // Recebe a flag do servidor indicando que ja pode começar a enviar o arquivo
+    }
 
     if ((handler = fopen(file, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
         puts("Erro ao abrir o arquivo"); // Nem precisa informar o servidor, creio eu
     }
     else{
-        while ((bytesLidos = fread(bufferEnvio, 1,sizeof(bufferEnvio), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+        while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
             printf("\n Bytes Lidos: %zd \n", bytesLidos);
-            if ((bytesEnviados = send(socket,bufferEnvio,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+            if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
                 puts("Deu erro ao enviar o arquivo");
                 return;
             }
-            bzero(bufferEnvio, TAM_MAX_ENVIO);
+            bzero(buffer, TAM_MAX); // Limpa o buffer
             qtdePacotes++;
             tamanhoArquivoEnviado += bytesEnviados;
         }
@@ -87,7 +95,7 @@ void send_file(char file[], int socket){
     fclose(handler);
 
 
-    printf("Foram enviados %zd bytes em %d pacotes de tamanho %d", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX_ENVIO);
+    printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
 }
 
 char* get_file_name(){
@@ -105,10 +113,31 @@ char* get_file_name(){
 // Deverá ser executada quando for realizar download de um arquivo, file -filename.ext
 
 void get_file(char *file, int socket){
-    char buffer[1024];
-    recv(socket, buffer, 1024, 0); // Recebe a mensagem sendo enviada pelo servidor
-    
-    printf("O servidor mandou: %s", buffer);
+    char buffer[TAM_MAX]; // buffer
+    FILE* handler; // handler do arquivo
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+
+    bzero(buffer, TAM_MAX);
+
+    if ((send(socket,"teste.txt",sizeof("teste.txt"),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
+        puts("Erro ao enviar o nome do arquivo...");
+
+    handler = fopen("clienteRecebeu.txt","w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+
+    while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
+        if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+            puts("Erro tentando receber algum pacote do cliente");
+        }
+
+        fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+        bzero(buffer, TAM_MAX);
+
+        if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+            fclose(handler);
+            return;
+        }
+    }
 }
 
 // Fecha a conexão com o servidor.
@@ -153,7 +182,7 @@ int main(int argc, char *argv[]){
             case 1: sync_client();
                 break;
             case 2:
-                send_file("teste.txt", socketCliente);
+                send_file_cliente("teste.txt", socketCliente);
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;

@@ -11,8 +11,6 @@ o CR LF na string, o que resulta em problema.
 
 Falta fazer a sincronização dos folders ambos do cliente e do servidor.
 
-Falta fazer o send do Servidor e Receive do Client.
-
 Falta fazer o dropboxServer sempre pegar o localhost como default, como feito no exemplo pelo Alberto.
 
 Tem que usar as estruturas fornecidas pelo professor para armazenar os dados dos clientes e dos arquivos.
