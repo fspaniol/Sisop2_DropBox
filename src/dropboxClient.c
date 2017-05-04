@@ -56,6 +56,7 @@ void sync_client(){
 void send_file_cliente(char file[], int socket){
     
     puts("\n\n Entrei na função de enviar arquivos para o servidor");
+    printf("Nome do arquivo: {%s}\n", file);
 
     FILE* handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
     ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
@@ -90,9 +91,8 @@ void send_file_cliente(char file[], int socket){
             qtdePacotes++;
             tamanhoArquivoEnviado += bytesEnviados;
         }
+        fclose(handler);
     }
-
-    fclose(handler);
 
 
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
@@ -100,13 +100,28 @@ void send_file_cliente(char file[], int socket){
 
 char* get_file_name(){
 
-    char* data;
-    fpurge(stdin);
-    printf("Digite o nome do arquivo: ");
-    fgets(data,50,stdin);
-    printf("Arquivo escolhido: %s\n", data);
-    return data;
+    char data[50];
+    char opcao;
+    char *dat;
+    int receiver;
+    //fpurge(stdin);
 
+    /// INICIO DA GAMBIARRA
+    fflush(stdin);
+    scanf("%c", &opcao);
+    fflush(stdin);
+    fflush(stdout);
+    /// FIM DA GAMBIARRA
+
+    receiver = getLine("Digite o nome do arquivo: ", data, sizeof(data));
+    if (receiver == 0) {
+        printf("Arquivo escolhido: [%s]\n", data);
+        dat = &data[0];
+        return dat;
+    }
+    printf("Deu ruim com o nome do arquivo... \n");
+
+    return NULL;
 }
 
 // Obtém um arquivo file do servidor
@@ -119,17 +134,24 @@ void get_file(char *file, int socket){
 
     bzero(buffer, TAM_MAX);
 
-    if ((send(socket,"teste.txt",sizeof("teste.txt"),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
-        puts("Erro ao enviar o nome do arquivo...");
+    //if ((send(socket,"teste.txt",sizeof("teste.txt"),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
+    if ((send(socket,file,sizeof(file),0)) < 0) {// Envia o nome do arquivo que deseja receber pro Servidor
+        //puts("Erro ao enviar o nome do arquivo...");
+        printf("Erro ao enviar o nome do arquivo... %s", file);
+        return;
+    }
 
-    handler = fopen("clienteRecebeu.txt","w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+    char *receivedFile = "Received.txt";
+    handler = fopen(receivedFile,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
 
     while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
         if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
             puts("Erro tentando receber algum pacote do cliente");
+            fclose(handler);
+            return;
         }
 
-        fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+        fwrite(buffer, 1, bytesRecebidos, handler); // Escreve no arquivo
 
         bzero(buffer, TAM_MAX);
 
@@ -182,7 +204,8 @@ int main(int argc, char *argv[]){
             case 1: sync_client();
                 break;
             case 2:
-                send_file_cliente("teste.txt", socketCliente);
+                send_file_cliente(get_file_name(), socketCliente);
+                //send_file_cliente("teste.txt", socketCliente);
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;

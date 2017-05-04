@@ -8,8 +8,13 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "../include/dropboxUtil.h"
+
+#define OK 			0
+#define NO_INPUT 	1
+#define TOO_LONG 	2
 
 // Cria o endereco do servidor
 
@@ -23,3 +28,48 @@ struct sockaddr_in retornaEndereco(char *host, int port){
 
     return enderecoServidor;
 }
+
+static int getLine (char *prmpt, char *buff, size_t sz) {
+	int ch, extra;
+
+	if (prmpt != NULL) {
+		printf("%s", prmpt);
+		fflush(stdout);
+	}
+	if (fgets (buff, sz, stdin) == NULL)
+		return NO_INPUT;
+
+	if (buff[strlen(buff)-1] != '\n') {
+		extra = 0;
+		while (((ch = getchar()) != '\n') && (ch != EOF))
+			extra = 1;
+		return (extra == 1) ? TOO_LONG : OK;
+	}
+
+	buff[strlen(buff)-1] = '\0';
+	// printf("sz: %lu", sz);
+	return OK;
+}
+/*
+int main () {
+	int rc;
+	char myBuffer[10];
+
+	while (1) {
+		printf("Digite o nome do arquivo desejado: \n");
+		getLine(">> ", myBuffer, sizeof(myBuffer));
+		if (rc == NO_INPUT) {
+			printf("No input.\n");
+			break;
+		}
+
+		if (rc == TOO_LONG) {
+			printf("Input too long [%s]\n", myBuffer);
+			//return 0;
+		}
+
+		printf("OK. [%s]\n", myBuffer);
+		//return 0;
+	}
+	return 0;
+}*/
