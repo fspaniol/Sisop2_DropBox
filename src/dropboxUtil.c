@@ -23,3 +23,12 @@ struct sockaddr_in retornaEndereco(char *host, int port){
 
     return enderecoServidor;
 }
+
+void imprimir_menu(){
+	puts("\n\n Qual operacao deseja realizar?");
+    puts("Digite 1 para sincronizar seu diretorio");
+    puts("Digite 2 para enviar um arquivo para o servidor");
+    puts("Digite 3 para receber um arquivo do servidor");
+    puts("Digite 0 para desconectar-se do dropbox");
+    printf("Sua escolha eh: ");
+}

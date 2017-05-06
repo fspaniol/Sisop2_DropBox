@@ -98,15 +98,15 @@ void send_file_cliente(char file[], int socket){
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
 }
 
-char* get_file_name(){
+char* get_info(char* mensagem){
 
     char* data;
-    fpurge(stdin);
-    printf("Digite o nome do arquivo: ");
+    fflush(stdin);
+    printf("%s ", mensagem);
     fgets(data,50,stdin);
-    printf("Arquivo escolhido: %s\n", data);
+    printf("Informacao requisitada: %s\n", data);
+    fflush(stdin);
     return data;
-
 }
 
 // Obtém um arquivo file do servidor
@@ -155,22 +155,22 @@ int main(int argc, char *argv[]){
     int socketCliente;
     int opcao = 1;
     int opcao_convertida;
+    char* usuario;
 
-    if (argc < 2) {
-        printf("Por favor inserir o valor do IP pelo qual deseja se conectar... \n");
+    if (argc < 3) {
+        printf("Por favor inserir o seu login e o valor do IP pelo qual deseja se conectar... \n");
         exit(0);
     }
 
-    socketCliente = connect_server(argv[1],50000);
+    socketCliente = connect_server(argv[2],53000);
+
+    send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
+
+    recv(socketCliente,&opcao,sizeof(opcao),0); // Recebe o aval do servidor
 
     while (opcao != 0){
-        
-        puts("\n\n Qual operacao deseja realizar?");
-        puts("Digite 1 para sincronizar seu diretorio");
-        puts("Digite 2 para enviar um arquivo para o servidor");
-        puts("Digite 3 para receber um arquivo do servidor");
-        puts("Digite 0 para desconectar-se do dropbox");
-        printf("Sua escolha eh: ");
+            
+        imprimir_menu();
         
         scanf("%d", &opcao);
         opcao_convertida = htonl(opcao);
@@ -186,8 +186,7 @@ int main(int argc, char *argv[]){
                 break;
             case 3: get_file(NULL, socketCliente);
                 break;
-            case 0: close_connection(socketCliente);
-                
+            case 0: close_connection(socketCliente);         
         }
         
     }

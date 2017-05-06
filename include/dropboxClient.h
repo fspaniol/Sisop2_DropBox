@@ -22,4 +22,6 @@ void get_file(char *file, int socket);                // Obtém um arquivo file 
 
 void close_connection();                  // Fecha a conexão com o servidor.
 
+char* get_info(char* mensagem);
+
 #endif /* dropboxClient_h */
