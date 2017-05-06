@@ -46,7 +46,7 @@ int criaSocketServidor(char *host, int port){
 void cria_pasta_usuario(char* usuario){
 
    struct stat st = {0};
-   char diretorio[50] = "Pasta_";
+   char diretorio[50] = "sync_dir_";
    strcat(diretorio,usuario);
 
     if (stat(diretorio, &st) != 0) {
@@ -75,7 +75,7 @@ void receive_file(int socket, char* usuario){
     bzero(buffer, TAM_MAX);
     int flag = 1;
     flag = htonl(flag);
-    char diretorio[100] = "Pasta_";
+    char diretorio[100] = "sync_dir_";
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
@@ -117,7 +117,7 @@ void receive_file(int socket, char* usuario){
 
 void send_file_servidor(int socket, char* usuario){
 
-    char diretorio[100] = "Pasta_";
+    char diretorio[100] = "sync_dir_";
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
@@ -140,7 +140,7 @@ void send_file_servidor(int socket, char* usuario){
     strcat(diretorio,buffer);
 
     handler = fopen(diretorio,"r");
-    
+
     while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
         if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
             puts("Deu erro ao enviar o arquivo");
