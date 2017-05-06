@@ -173,7 +173,7 @@ int main(){
     
     while (1){
         
-        printf("Servidor esperando algum cliente... \n");
+        printf("\n Servidor esperando algum cliente... \n");
         
         if ((listen(socketServidor,10)) != 0){
             printf("Servidor cheio, tente mais tarde \n");
@@ -188,6 +188,7 @@ int main(){
         send(novoSocket, &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
         
         while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
+            opcao_recebida = 5;
 
             //puts("Estou esperando acao de algum cliente... \n");
             
@@ -202,13 +203,10 @@ int main(){
                 case 3: send_file_servidor(novoSocket, usuario);
                     break;
                 case 0: printf("Cliente desconectado \n");
-                    break;
-            }
-            opcao_recebida = 5;
-            
+            }          
         }
         
-        
+        opcao_recebida = 5; 
     }
     
     return 0;
