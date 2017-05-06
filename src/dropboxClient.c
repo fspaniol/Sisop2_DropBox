@@ -44,6 +44,20 @@ int connect_server(char *host, int port){
     return socketCliente; // Retorna o socket a ser usado
 }
 
+// Le alguma informacao do stdin escrevendo alguma mensagem passada como parametro
+
+void get_info(char* buffer, char* mensagem){
+
+    fflush(stdin);
+    fpurge(stdin);
+    printf("\n %s ", mensagem);
+    fgets(buffer,50,stdin);
+    strtok(buffer, "\n");
+    printf("Informacao requisitada: %s\n", buffer);
+    fflush(stdin);
+    fpurge(stdin);
+}
+
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
 void sync_client(){
@@ -53,7 +67,7 @@ void sync_client(){
 // Envia um arquivo file para o servidor
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
-void send_file_cliente(char file[], int socket){
+void send_file_cliente(int socket){
     
     puts("\n\n Entrei na função de enviar arquivos para o servidor");
     printf("Nome do arquivo: {%s}\n", file);
@@ -66,21 +80,23 @@ void send_file_cliente(char file[], int socket){
     int qtdePacotes = 0;
     int avalServidor = 0;
 
-    if ((bytesEnviados = send(socket,"recebido.txt",sizeof("recebido.txt"),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
+    get_info(buffer,"Digite o arquivo que queres enviar: ");
+
+
+    if ((bytesEnviados = send(socket,buffer,sizeof(buffer),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
         puts("Deu erro ao enviar o nome do arquivo para o servidor");
         return;
     }
-
-    bzero(buffer, TAM_MAX); // Limpa o buffer
 
     while(avalServidor == 0){
         recv(socket,&avalServidor,sizeof(avalServidor),0); // Recebe a flag do servidor indicando que ja pode começar a enviar o arquivo
     }
 
-    if ((handler = fopen(file, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
+    if ((handler = fopen(buffer, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
         puts("Erro ao abrir o arquivo"); // Nem precisa informar o servidor, creio eu
     }
     else{
+        bzero(buffer, TAM_MAX); // Limpa o buffer
         while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
             printf("\n Bytes Lidos: %zd \n", bytesLidos);
             if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
@@ -98,6 +114,7 @@ void send_file_cliente(char file[], int socket){
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
 }
 
+<<<<<<< HEAD
 char* get_file_name(){
 
     char data[50];
@@ -124,16 +141,19 @@ char* get_file_name(){
     return NULL;
 }
 
+=======
+>>>>>>> 01185c65147516b82bb4a557d2057cbbfc2d631c
 // Obtém um arquivo file do servidor
 // Deverá ser executada quando for realizar download de um arquivo, file -filename.ext
 
-void get_file(char *file, int socket){
+void get_file(int socket){
     char buffer[TAM_MAX]; // buffer
     FILE* handler; // handler do arquivo
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
 
     bzero(buffer, TAM_MAX);
 
+<<<<<<< HEAD
     //if ((send(socket,"teste.txt",sizeof("teste.txt"),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
     if ((send(socket,file,sizeof(file),0)) < 0) {// Envia o nome do arquivo que deseja receber pro Servidor
         //puts("Erro ao enviar o nome do arquivo...");
@@ -143,6 +163,16 @@ void get_file(char *file, int socket){
 
     char *receivedFile = "Received.txt";
     handler = fopen(receivedFile,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+=======
+    get_info(buffer,"Digite o arquivo que queres baixar: ");
+
+    if ((send(socket,buffer,sizeof(buffer),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
+        puts("Erro ao enviar o nome do arquivo...");
+
+    handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+
+    bzero(buffer, TAM_MAX);
+>>>>>>> 01185c65147516b82bb4a557d2057cbbfc2d631c
 
     while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
         if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
@@ -177,22 +207,22 @@ int main(int argc, char *argv[]){
     int socketCliente;
     int opcao = 1;
     int opcao_convertida;
+    char* usuario;
 
-    if (argc < 2) {
-        printf("Por favor inserir o valor do IP pelo qual deseja se conectar... \n");
+    if (argc < 3) {
+        printf("Por favor inserir o seu login e o valor do IP pelo qual deseja se conectar... \n");
         exit(0);
     }
 
-    socketCliente = connect_server(argv[1],50000);
+    socketCliente = connect_server(argv[2],53000);
+
+    send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
+
+    recv(socketCliente,&opcao,sizeof(opcao),0); // Recebe o aval do servidor
 
     while (opcao != 0){
-        
-        puts("\n\n Qual operacao deseja realizar?");
-        puts("Digite 1 para sincronizar seu diretorio");
-        puts("Digite 2 para enviar um arquivo para o servidor");
-        puts("Digite 3 para receber um arquivo do servidor");
-        puts("Digite 0 para desconectar-se do dropbox");
-        printf("Sua escolha eh: ");
+            
+        imprimir_menu();
         
         scanf("%d", &opcao);
         opcao_convertida = htonl(opcao);
@@ -204,13 +234,16 @@ int main(int argc, char *argv[]){
             case 1: sync_client();
                 break;
             case 2:
+<<<<<<< HEAD
                 send_file_cliente(get_file_name(), socketCliente);
                 //send_file_cliente("teste.txt", socketCliente);
+=======
+                send_file_cliente(socketCliente);
+>>>>>>> 01185c65147516b82bb4a557d2057cbbfc2d631c
                 break;
-            case 3: get_file(NULL, socketCliente);
+            case 3: get_file(socketCliente);
                 break;
-            case 0: close_connection(socketCliente);
-                
+            case 0: close_connection(socketCliente);         
         }
         
     }

@@ -6,9 +6,6 @@ Criar um dropbox no modelo Cliente Servidor com o uso de Sockets.
 
 Problemas na versão atual:
 
-Passar o nome de arquivos por parâmetro via stdin resulta em segmentation fault, aparentemente quando o fgets é executado, ele bota junto
-o CR LF na string, o que resulta em problema.
-
 Falta fazer a sincronização dos folders ambos do cliente e do servidor.
 
 Falta fazer o dropboxServer sempre pegar o localhost como default, como feito no exemplo pelo Alberto.

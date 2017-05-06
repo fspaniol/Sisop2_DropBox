@@ -30,8 +30,10 @@ int criaSocketServidor(char *host, int port); // Cria o socket do servidor
 
 void sync_server();                 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 
-void receive_file(int socket);      // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
+void receive_file(int socket, char* usuario);      // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
-void send_file_servidor(int socket);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
+void send_file_servidor(int socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
+
+void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
 
 #endif /* dropboxServer_h */

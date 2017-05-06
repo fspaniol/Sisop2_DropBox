@@ -19,6 +19,7 @@
 #include "dropboxServer.h"
 
 struct sockaddr_in retornaEndereco(char *host, int port); // Cria o endereco do servidor
+void imprimir_menu(); // imprime o menu para o cliente
 
 static int getLine ();
 
