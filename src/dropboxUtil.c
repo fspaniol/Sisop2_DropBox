@@ -24,8 +24,8 @@ struct sockaddr_in retornaEndereco(char *host, int port){
     return enderecoServidor;
 }
 
-void imprimir_menu(){
-	puts("\n\n Qual operacao deseja realizar?");
+void imprimir_menu(char *user){
+	printf("\n\nOla, %s. Qual operacao deseja realizar?\n", user);
     puts("Digite 1 para sincronizar seu diretorio");
     puts("Digite 2 para enviar um arquivo para o servidor");
     puts("Digite 3 para receber um arquivo do servidor");

@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -49,13 +50,13 @@ int connect_server(char *host, int port){
 void get_info(char* buffer, char* mensagem){
 
     fflush(stdin);
-    fpurge(stdin);
+    __fpurge(stdin); //fpurge
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("Informacao requisitada: %s\n", buffer);
     fflush(stdin);
-    fpurge(stdin);
+    __fpurge(stdin);
 }
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
@@ -106,9 +107,8 @@ void send_file_cliente(int socket){
             qtdePacotes++;
             tamanhoArquivoEnviado += bytesEnviados;
         }
+        fclose(handler);
     }
-
-    fclose(handler);
 
 
     printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
 
     while (opcao != 0){
             
-        imprimir_menu();
+        imprimir_menu(argv[1]);
         
         scanf("%d", &opcao);
         opcao_convertida = htonl(opcao);
