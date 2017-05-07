@@ -6,7 +6,6 @@
 //
 //
 
-
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -16,7 +15,6 @@
 #include <unistd.h> 
 #include <arpa/inet.h> 
 #include <sys/stat.h> 
-
 
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
@@ -79,7 +77,7 @@ void receive_file(int socket, char* usuario){
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
-    while((bytesRecebidos = recv(socket,buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
     }
 
     printf("[Server] The file to be sent by client is: %s\n", buffer); // Escreve o nome do arquivo
@@ -94,10 +92,6 @@ void receive_file(int socket, char* usuario){
     bytesRecebidos = 0; // Reseta o numero de bytes lidos
 
     handler = fopen(diretorio, "w"); // Abre o arquivo 
-    if (handler == NULL) {
-        puts("[ERROR ] Invalid file.\n");
-        return;
-    }
 
     bzero(buffer, TAM_MAX); // Reseta o buffer
 
@@ -107,6 +101,11 @@ void receive_file(int socket, char* usuario){
             fclose(handler);
             return;
     	}
+        if (buffer[0] == '\0'){
+            puts("[Server] Client could not send file.");
+            fclose(handler);
+            return; 
+        }
 
     	fwrite(buffer, 1, bytesRecebidos, handler); // Escreve no arquivo
 
@@ -146,7 +145,11 @@ void send_file_servidor(int socket, char* usuario){
 
     strcat(diretorio,buffer);
 
-    handler = fopen(diretorio,"r");
+    //handler = fopen(diretorio,"r");
+    if ((handler = fopen(diretorio, "r")) == NULL) {
+        puts("[ERROR ] Error sending the file.");
+        return;
+    }
 
     while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
         if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro

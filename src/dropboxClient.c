@@ -19,7 +19,6 @@
 #include "../include/dropboxClient.h"
 #include "dropboxUtil.c"
 
-
 #define TAM_MAX 1024
 
 // Conecta o cliente com o servidor
@@ -94,13 +93,15 @@ void send_file_cliente(int socket){
     }
 
     if ((handler = fopen(buffer, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
-        puts("[ERROR ] Error opening file."); // Nem precisa informar o servidor, creio eu PRECISA S
-        send(socket, NULL, -1, -1);
+        puts("[ERROR ] File not found."); // Nem precisa informar o servidor, creio eu PRECISA S
+        char read = '\0';
+        send(socket, &read, sizeof(read), 0);
         return;
     }
+
     else{
         bzero(buffer, TAM_MAX); // Limpa o buffer
-        while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+        while ((bytesLidos = fread(buffer, 1, sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
             printf("\n Bytes read: %zd \n", bytesLidos);
             if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
                 puts("[ERROR ] Error while sending the file.");
@@ -112,7 +113,6 @@ void send_file_cliente(int socket){
         }
         fclose(handler);
     }
-
 
     printf("[Client] There were sent %zd bytes in %d packages of %d of size.\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
 }
@@ -161,7 +161,6 @@ void close_connection(int socket){
     
 }
 
-
 int main(int argc, char *argv[]){
     
     int socketCliente;
@@ -172,7 +171,7 @@ int main(int argc, char *argv[]){
     if (argc < 3) {
         printf("[Client] Please, insert your login and the desired IP to connect...\n");
         exit(0);
-    }
+    } 
 
     socketCliente = connect_server(argv[2],53000);
 
@@ -191,14 +190,17 @@ int main(int argc, char *argv[]){
         send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0); // Informa o servidor qual a opção que ele vai realizar
         
         switch(opcao) {
-            case 1: sync_client();
+            case 1: 
+                sync_client();
                 break;
             case 2:
                 send_file_cliente(socketCliente);
                 break;
-            case 3: get_file(socketCliente);
+            case 3: 
+                get_file(socketCliente);
                 break;
-            case 0: close_connection(socketCliente);         
+            case 0: 
+                close_connection(socketCliente);         
         }
         
     }
