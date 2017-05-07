@@ -51,10 +51,10 @@ void cria_pasta_usuario(char* usuario){
 
     if (stat(diretorio, &st) != 0) {
         mkdir(diretorio, 07777);
-        puts("Criei o diretorio, pois nao existia");
+        puts("[Server] Created client folder. (Cliend didn't have a folder)");
     }
     else{
-        puts("Cliente já possui pasta...");
+        puts("[Server] Client already has folder.");
     }
 }
 
@@ -67,7 +67,7 @@ void sync_server(){
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
 void receive_file(int socket, char* usuario){
-   	puts ("\n Vou receber o arquivo enviado pelo cliente \n");
+   	puts("[Server] Server will receive file from client.");
     char buffer[TAM_MAX]; // Buffer que armazena os pacotes que vem sido recebidos
     ssize_t bytesRecebidos = 0; // Quantidade de bytes que foram recebidos numa passagem
     ssize_t bytesEnviados; 
@@ -82,10 +82,10 @@ void receive_file(int socket, char* usuario){
     while((bytesRecebidos = recv(socket,buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
     }
 
-    printf("O arquivo a ser enviado pelo cliente eh: %s \n\n", buffer); // Escreve o nome do arquivo
+    printf("[Server] The file to be sent by client is: %s\n", buffer); // Escreve o nome do arquivo
     
     if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
-        puts("Erro ao enviar o aval ao cliente de que recebi o nome do arquivo... "); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
+        puts("[ERROR ] Error sending acknowledgement to client for file receiving."); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
         return;
     }
 
@@ -94,23 +94,30 @@ void receive_file(int socket, char* usuario){
     bytesRecebidos = 0; // Reseta o numero de bytes lidos
 
     handler = fopen(diretorio, "w"); // Abre o arquivo 
+    if (handler == NULL) {
+        puts("[ERROR ] Invalid file.\n");
+        return;
+    }
 
     bzero(buffer, TAM_MAX); // Reseta o buffer
 
     while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
     	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
-       		puts("Erro tentando receber algum pacote do cliente");
+       		puts("[ERROR ] Error when trying to receive client package.");
+            fclose(handler);
+            return;
     	}
 
-    	fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+    	fwrite(buffer, 1, bytesRecebidos, handler); // Escreve no arquivo
 
         bzero(buffer, TAM_MAX); // Reseta o buffer
 
     	if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
     		fclose(handler);
+            puts("[Server] Successfully received client file.");
     		return;
     	}
-    }    
+    }
 }
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
@@ -121,7 +128,7 @@ void send_file_servidor(int socket, char* usuario){
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
-    puts ("\n Vou receber o nome do arquivo que o cliente deseja.... ");
+    puts("[Server] Server will receive the desired filename...");
 
     char buffer[TAM_MAX];
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
@@ -133,9 +140,9 @@ void send_file_servidor(int socket, char* usuario){
 
     bytesRecebidos = recv(socket, buffer, TAM_MAX, 0); // recebe o nome do arquivo que o cliente quer receber
     if (bytesRecebidos < 0)
-        puts("Erro ao receber o nome do arquivo que deve ser enviado");
+        puts("[ERROR ] Error receiving the filename to be sent.");
     else
-        printf("\n O arquivo que o cliente deseja eh %s \n\n", buffer); // Escreve o nome do arquivo que o cliente quer
+        printf("[Server] The requested file by the client is: %s\n", buffer); // Escreve o nome do arquivo que o cliente quer
 
     strcat(diretorio,buffer);
 
@@ -143,7 +150,7 @@ void send_file_servidor(int socket, char* usuario){
 
     while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
         if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
-            puts("Deu erro ao enviar o arquivo");
+            puts("[ERROR ] Error sending the file.");
             return;
         }
         bzero(buffer, TAM_MAX); // Reseta o buffer
@@ -151,8 +158,6 @@ void send_file_servidor(int socket, char* usuario){
 
     fclose(handler);
 }
-
-
 
 // Setando a conexão TCP com o cliente
 
@@ -173,15 +178,15 @@ int main(){
     
     while (1){
         
-        printf("\n Servidor esperando algum cliente... \n");
+        printf("\n[Server] Server waiting for client...\n");
         
         if ((listen(socketServidor,10)) != 0){
-            printf("Servidor cheio, tente mais tarde \n");
+            printf("[Server] Server is full. Try again later.\n");
         }
         
         tamanhoEndereco = sizeof depositoServidor;
         novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
-        puts("Cliente chegou...");
+        puts("[Server] Client connected...");
 
         recv(novoSocket, usuario, sizeof(usuario), 0); // Recebe o numero do usuario
         cria_pasta_usuario(usuario);
@@ -202,7 +207,7 @@ int main(){
                     break;
                 case 3: send_file_servidor(novoSocket, usuario);
                     break;
-                case 0: printf("Cliente desconectado \n");
+                case 0: printf("[Server] Client disconnected.\n");
             }          
         }
         

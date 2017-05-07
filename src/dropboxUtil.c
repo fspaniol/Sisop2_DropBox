@@ -25,10 +25,11 @@ struct sockaddr_in retornaEndereco(char *host, int port){
 }
 
 void imprimir_menu(char *user){
-	printf("\n\nOla, %s. Qual operacao deseja realizar?\n", user);
-    puts("Digite 1 para sincronizar seu diretorio");
-    puts("Digite 2 para enviar um arquivo para o servidor");
-    puts("Digite 3 para receber um arquivo do servidor");
-    puts("Digite 0 para desconectar-se do dropbox");
-    printf("Sua escolha eh: ");
+	printf("\n\n");
+	printf("[Server] Greetings, %s. What do you want to do?\n", user);
+    puts("\t [1] to syncronize your directory.");
+    puts("\t [2] to send a file to the server.");
+    puts("\t [3] to receive a file from the server.");
+    puts("\t [0] to disconnect from the server.");
+    printf(">> ");
 }

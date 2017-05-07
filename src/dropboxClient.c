@@ -54,7 +54,7 @@ void get_info(char* buffer, char* mensagem){
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
-    printf("Informacao requisitada: %s\n", buffer);
+    printf("[Client] Requested information: %s\n", buffer);
     fflush(stdin);
     __fpurge(stdin);
 }
@@ -70,7 +70,7 @@ void sync_client(){
 
 void send_file_cliente(int socket){
     
-    puts("\n\n Entrei na função de enviar arquivos para o servidor");
+    //puts("\n[Client] entered 'Send file client' function");
 
     FILE* handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
     ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
@@ -80,11 +80,12 @@ void send_file_cliente(int socket){
     int qtdePacotes = 0;
     int avalServidor = 0;
 
-    get_info(buffer,"Digite o arquivo que queres enviar: ");
+    printf("[Client] Please enter the name of the file:");
+    get_info(buffer,">> ");
 
 
     if ((bytesEnviados = send(socket,buffer,sizeof(buffer),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
-        puts("Deu erro ao enviar o nome do arquivo para o servidor");
+        puts("[ERROR ] An error has occured while sending file request to server.");
         return;
     }
 
@@ -93,14 +94,16 @@ void send_file_cliente(int socket){
     }
 
     if ((handler = fopen(buffer, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
-        puts("Erro ao abrir o arquivo"); // Nem precisa informar o servidor, creio eu
+        puts("[ERROR ] Error opening file."); // Nem precisa informar o servidor, creio eu PRECISA S
+        send(socket, NULL, -1, -1);
+        return;
     }
     else{
         bzero(buffer, TAM_MAX); // Limpa o buffer
         while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
-            printf("\n Bytes Lidos: %zd \n", bytesLidos);
+            printf("\n Bytes read: %zd \n", bytesLidos);
             if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
-                puts("Deu erro ao enviar o arquivo");
+                puts("[ERROR ] Error while sending the file.");
                 return;
             }
             bzero(buffer, TAM_MAX); // Limpa o buffer
@@ -111,7 +114,7 @@ void send_file_cliente(int socket){
     }
 
 
-    printf("Foram enviados %zd bytes em %d pacotes de tamanho %d\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
+    printf("[Client] There were sent %zd bytes in %d packages of %d of size.\n", tamanhoArquivoEnviado, qtdePacotes, TAM_MAX);
 }
 
 // Obtém um arquivo file do servidor
@@ -124,10 +127,10 @@ void get_file(int socket){
 
     bzero(buffer, TAM_MAX);
 
-    get_info(buffer,"Digite o arquivo que queres baixar: ");
+    get_info(buffer,"[Client] Please, inform the desired file to download:\n>> ");
 
     if ((send(socket,buffer,sizeof(buffer),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
-        puts("Erro ao enviar o nome do arquivo...");
+        puts("[ERROR ] Error while sending the filename...");
 
     handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
 
@@ -135,7 +138,7 @@ void get_file(int socket){
 
     while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
         if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
-            puts("Erro tentando receber algum pacote do cliente");
+            puts("[ERROR ] Error when receiving client's packages.");
         }
 
         fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
@@ -153,7 +156,7 @@ void get_file(int socket){
 
 void close_connection(int socket){
     
-    printf("\n Conexao encerrada\n");
+    printf("\n[Client] Connection terminated.\n");
     close(socket);
     
 }
@@ -167,7 +170,7 @@ int main(int argc, char *argv[]){
     char* usuario;
 
     if (argc < 3) {
-        printf("Por favor inserir o seu login e o valor do IP pelo qual deseja se conectar... \n");
+        printf("[Client] Please, insert your login and the desired IP to connect...\n");
         exit(0);
     }
 
