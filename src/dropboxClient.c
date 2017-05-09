@@ -7,7 +7,7 @@
 //
 
 #include <stdio.h>
-#include <stdio_ext.h>
+//#include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -49,13 +49,13 @@ int connect_server(char *host, int port){
 void get_info(char* buffer, char* mensagem){
 
     fflush(stdin);
-    __fpurge(stdin); //fpurge
+    fpurge(stdin); //fpurge
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("[Client] Requested information: %s\n", buffer);
     fflush(stdin);
-    __fpurge(stdin);
+    fpurge(stdin);
 }
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
@@ -129,8 +129,10 @@ void get_file(int socket){
 
     get_info(buffer,"[Client] Please, inform the desired file to download:\n>> ");
 
-    if ((send(socket,buffer,sizeof(buffer),0)) < 0) // Envia o nome do arquivo que deseja receber pro Servidor
+    if ((send(socket,buffer,sizeof(buffer),0)) < 0){ // Envia o nome do arquivo que deseja receber pro Servidor
         puts("[ERROR ] Error while sending the filename...");
+        exit(1);
+    }
 
     handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
 
