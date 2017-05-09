@@ -16,6 +16,11 @@
 #include <unistd.h> 
 #include <arpa/inet.h>  
 
+///////////////////
+#include <sys/types.h>
+#include <dirent.h>
+///////////////////
+
 #include "../include/dropboxClient.h"
 #include "dropboxUtil.c"
 
@@ -61,7 +66,27 @@ void get_info(char* buffer, char* mensagem){
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
 void sync_client(){
-    
+   DIR *dir;
+   struct dirent *dent;
+   const char *direcName;
+
+   printf("Type the directory name that you wish to synchronize:");
+   scanf("%s", direcName);
+   
+   dir = opendir(direcName);   
+
+   if(dir != NULL){
+        while((dent = readdir(dir)) != NULL){
+            if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
+
+            }else
+            {
+                printf("%s", dent->d_name);
+                printf("\n");
+            }
+        }
+    }
+    close(dir);
 }
 
 // Envia um arquivo file para o servidor
@@ -72,7 +97,7 @@ void send_file_cliente(int socket){
     //puts("\n[Client] entered 'Send file client' function");
 
     FILE* handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
-    ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lidos pelo sistema
+    ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lios pelo sistema
     ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
     ssize_t tamanhoArquivoEnviado = 0;
     char buffer[TAM_MAX]; // Buffer que armazena os pacotes para enviar
