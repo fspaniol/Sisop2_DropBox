@@ -7,7 +7,7 @@
 //
 
 #include <stdio.h>
-//#include <stdio_ext.h>
+//  #include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -54,13 +54,13 @@ int connect_server(char *host, int port){
 void get_info(char* buffer, char* mensagem){
 
     fflush(stdin);
-    fpurge(stdin); //fpurge
+    fflush(stdin);//fpurge(stdin); //fpurge
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("[Client] Requested information: %s\n", buffer);
     fflush(stdin);
-    fpurge(stdin);
+    fflush(stdin);//fpurge(stdin);
 }
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
@@ -68,10 +68,11 @@ void get_info(char* buffer, char* mensagem){
 void sync_client(){
    DIR *dir;
    struct dirent *dent;
-   const char *direcName;
+   char *direcName;
 
-   printf("Type the directory name that you wish to synchronize:");
-   scanf("%s", direcName);
+   get_info("Type the directory name that you wish to synchronize:", direcName);
+   //printf("Type the directory name that you wish to synchronize:");
+   //scanf("%s", direcName);
    
    dir = opendir(direcName);   
 
@@ -86,7 +87,7 @@ void sync_client(){
             }
         }
     }
-    close(dir);
+    closedir(dir);
 }
 
 // Envia um arquivo file para o servidor
