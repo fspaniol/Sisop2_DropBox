@@ -70,9 +70,11 @@ void sync_client(){
    struct dirent *dent;
    char *direcName;
 
-   get_info("Type the directory name that you wish to synchronize:", direcName);
-   //printf("Type the directory name that you wish to synchronize:");
-   //scanf("%s", direcName);
+   //get_info("Type the directory name that you wish to synchronize:", direcName);
+   printf("Type the directory name that you wish to synchronize:");
+   scanf("%s", direcName);
+   fflush(stdin);
+   fgets(direcName,50,stdin);
    
    dir = opendir(direcName);   
 
