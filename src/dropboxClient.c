@@ -26,6 +26,11 @@
 
 #define TAM_MAX 1024
 
+#if defined(__linux) || defined(__unix)
+#define fpurge __fpurge
+#endif
+
+
 // Conecta o cliente com o servidor
 // Host - endereço do servidor
 // Port - porta aguardando conexão
@@ -53,14 +58,15 @@ int connect_server(char *host, int port){
 
 void get_info(char* buffer, char* mensagem){
 
-    fflush(stdin);
-    fflush(stdin);//fpurge(stdin); //fpurge
+    fpurge(stdin);
+
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("[Client] Requested information: %s\n", buffer);
-    fflush(stdin);
-    fflush(stdin);//fpurge(stdin);
+
+    fpurge(stdin);
+
 }
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
