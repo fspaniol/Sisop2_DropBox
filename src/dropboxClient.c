@@ -81,6 +81,7 @@ void sync_client(){
    scanf("%s", direcName);
    fflush(stdin);
    fgets(direcName,50,stdin);
+   strtok(direcName, "\n");
    
    dir = opendir(direcName);   
 
@@ -167,24 +168,27 @@ void get_file(int socket){
         puts("[ERROR ] Error while sending the filename...");
         exit(1);
     }
-
-    handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
-
-    bzero(buffer, TAM_MAX);
-
-    while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
-        if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
-            puts("[ERROR ] Error when receiving client's packages.");
-        }
-
-        fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+    if( access( buffer, F_OK ) != -1 ) {
+        handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
 
         bzero(buffer, TAM_MAX);
 
-        if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
-            fclose(handler);
-            return;
+        while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
+            if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+                puts("[ERROR ] Error when receiving client's packages.");
+            }
+
+            fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+            bzero(buffer, TAM_MAX);
+
+            if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+                fclose(handler);
+                return;
+            }
         }
+    }else{
+        printf("file nao existe!\n");
     }
 }
 
