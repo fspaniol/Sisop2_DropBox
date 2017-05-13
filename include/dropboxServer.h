@@ -10,6 +10,7 @@
 #define dropboxServer_h
 
 #include <stdio.h>
+#include <pthread.h>
 #include "dropboxUtil.h"
 
 struct file_info{
@@ -35,5 +36,7 @@ void receive_file(int socket, char* usuario);      // Recebe um arquivo file do 
 void send_file_servidor(int socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
 void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
+
+void *atendeCliente(void *socket);
 
 #endif /* dropboxServer_h */

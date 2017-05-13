@@ -40,6 +40,7 @@ int criaSocketServidor(char *host, int port){
     return socketServidor;
 }
 
+
 // Ve se o usuario ja possui uma pasta, se nao, cria
 void cria_pasta_usuario(char* usuario){
 
@@ -54,6 +55,38 @@ void cria_pasta_usuario(char* usuario){
     else{
         puts("[Server] Client already has folder.");
     }
+}
+
+void *atendeCliente(void *socket){
+    int *socketCliente = (int *) socket;
+    int opcao_recebida = 1;
+    char usuario[TAM_MAX];
+    int flag = 1;
+    flag = htonl(flag);
+
+    recv(*socketCliente, usuario, sizeof(usuario), 0); // Recebe o numero do usuario
+    cria_pasta_usuario(usuario);
+    send(*socketCliente, &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+        
+    while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
+        opcao_recebida = 5;
+        //puts("Estou esperando acao de algum cliente... \n");
+            
+        recv(*socketCliente, &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
+        opcao_recebida = htonl(opcao_recebida);
+            
+        switch(opcao_recebida) {
+            case 1: sync_server();
+                break;
+            case 2: receive_file(*socketCliente, usuario);
+                break;
+            case 3: send_file_servidor(*socketCliente, usuario);
+                break;
+            case 0: printf("[Server] Client disconnected.\n");
+        }          
+    }
+
+    return 0;
 }
 
 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
@@ -167,12 +200,14 @@ void send_file_servidor(int socket, char* usuario){
 int main(){
     
     int socketServidor, novoSocket;
-    struct sockaddr_storage depositoServidor;
-    socklen_t tamanhoEndereco;
-    int opcao_recebida = 1;
-    char usuario[TAM_MAX];
-    int flag = 1;
-    flag = htonl(flag);
+    struct sockaddr_storage depositoServidor[10];
+    socklen_t tamanhoEndereco[10];
+    pthread_t threads[10];
+    int usados[10]; // Indica se as threads tão sendo usadas, 1 se sim, 0 se não
+    int cont = 0;
+
+    for (int x = 0; x < 10; x++)
+        usados[x] = 0;
     
     socketServidor = criaSocketServidor("127.0.0.1", 53000);
     
@@ -186,35 +221,31 @@ int main(){
         if ((listen(socketServidor,10)) != 0){
             printf("[Server] Server is full. Try again later.\n");
         }
-        
-        tamanhoEndereco = sizeof depositoServidor;
-        novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
-        puts("[Server] Client connected...");
 
-        recv(novoSocket, usuario, sizeof(usuario), 0); // Recebe o numero do usuario
-        cria_pasta_usuario(usuario);
-        send(novoSocket, &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
-        
-        while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
-            opcao_recebida = 5;
-
-            //puts("Estou esperando acao de algum cliente... \n");
-            
-            recv(novoSocket, &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
-            opcao_recebida = htonl(opcao_recebida);
-            
-            switch(opcao_recebida) {
-                case 1: sync_server();
-                    break;
-                case 2: receive_file(novoSocket, usuario);
-                    break;
-                case 3: send_file_servidor(novoSocket, usuario);
-                    break;
-                case 0: printf("[Server] Client disconnected.\n");
-            }          
+        while (usados[cont] == 1){
+            cont++;
+            if (cont == 10)
+                cont = 0;
         }
         
-        opcao_recebida = 5; 
+        tamanhoEndereco[cont] = sizeof(depositoServidor);
+        novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        puts("[Server] Client connected...");
+
+        while (usados[cont] == 1){
+            cont++;
+            if (cont == 10)
+                cont = 0;
+        }
+
+        usados[cont] = 1;
+        printf("[Server] Thread %d created \n", cont+1);
+
+        if (pthread_create(&threads[cont],NULL,atendeCliente,&novoSocket)){
+            puts("[Server] Error trying to create a thread ");
+            return 0;
+        }
+        
     }
     
     return 0;
