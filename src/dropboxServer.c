@@ -59,9 +59,11 @@ void cria_pasta_usuario(char* usuario){
 }
 
 void *atendeCliente(void *indice){
-    int *index = (int *) indice;
+    int *temp = (int *) indice;
+    int index = *temp;
+
     struct Client clienteLogado;
-    clienteLogado = clientes[*index];
+    clienteLogado = clientes[index];
 
     int opcao_recebida = 1;
 
@@ -87,11 +89,11 @@ void *atendeCliente(void *indice){
                 break;
             case 3: send_file_servidor(clienteLogado.devices[0], clienteLogado.userid);
                 break;
-            case 0: printf("[Server][User: %s] Client %d disconnected.\n", clienteLogado.userid, *index);
+            case 0: printf("[Server][User: %s] Client %d disconnected.\n", clienteLogado.userid, index);
         }          
     }
 
-    clientes[*index].logged_in = 0; 
+    clientes[index].logged_in = 0; 
 
     return 0;
 }
