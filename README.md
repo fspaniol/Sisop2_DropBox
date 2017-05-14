@@ -12,7 +12,7 @@ Falta fazer o dropboxServer sempre pegar o localhost como default, como feito no
 
 Tem que usar as estruturas fornecidas pelo professor para armazenar os dados dos clientes e dos arquivos.
 
-Aplicar concorrencia no sistema para vários clientes se conectarem ao mesmo tempo.
+Todas threads usam o mesmo valor em indice, então ao tentarem sinalizar que estão desconectadas, sempre sinalizam que a ultima conectada se desconectou
 
 Detalhes: Os arquivos estão sendo mandados não como um stream de bytes, mas como blocos de 1024 bytes, isso facilita a criação dos buffers
 e não da overload no sistema e sockets como um todo.

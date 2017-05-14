@@ -37,6 +37,6 @@ void send_file_servidor(int socket, char* usuario);         // Envia o arquivo f
 
 void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
 
-void *atendeCliente(void *socket);
+void *atendeCliente(void *indice);
 
 #endif /* dropboxServer_h */
