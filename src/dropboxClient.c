@@ -77,7 +77,7 @@ void sync_client(){
    char *direcName;
 
    //get_info("Type the directory name that you wish to synchronize:", direcName);
-   printf("Type the directory name that you wish to synchronize:");
+   printf("[Server] Type the directory name that you wish to synchronize:");
    scanf("%s", direcName);
    fflush(stdin);
    fgets(direcName,50,stdin);
@@ -119,7 +119,7 @@ void send_file_cliente(int socket){
 
 
     if ((bytesEnviados = send(socket,buffer,sizeof(buffer),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
-        puts("[ERROR ] An error has occured while sending file request to server.");
+        puts("[ERROR] An error has occured while sending file request to server.");
         return;
     }
 
@@ -128,7 +128,7 @@ void send_file_cliente(int socket){
     }
 
     if ((handler = fopen(buffer, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
-        puts("[ERROR ] File not found."); // Nem precisa informar o servidor, creio eu PRECISA S
+        puts("[ERROR] File not found."); // Nem precisa informar o servidor, creio eu PRECISA S
         char read = '\0';
         send(socket, &read, sizeof(read), 0);
         return;
@@ -139,7 +139,7 @@ void send_file_cliente(int socket){
         while ((bytesLidos = fread(buffer, 1, sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
             printf("\n Bytes read: %zd \n", bytesLidos);
             if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
-                puts("[ERROR ] Error while sending the file.");
+                puts("[ERROR] Error while sending the file.");
                 return;
             }
             bzero(buffer, TAM_MAX); // Limpa o buffer
@@ -165,7 +165,7 @@ void get_file(int socket){
     get_info(buffer,"[Client] Please, inform the desired file to download:\n>> ");
 
     if ((send(socket,buffer,sizeof(buffer),0)) < 0){ // Envia o nome do arquivo que deseja receber pro Servidor
-        puts("[ERROR ] Error while sending the filename...");
+        puts("[ERROR] Error while sending the filename...");
         exit(1);
     }
     if( access( buffer, F_OK ) != -1 ) {
@@ -175,7 +175,7 @@ void get_file(int socket){
 
         while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
             if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
-                puts("[ERROR ] Error when receiving client's packages.");
+                puts("[ERROR] Error when receiving client's packages.");
             }
 
             fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
@@ -188,7 +188,7 @@ void get_file(int socket){
             }
         }
     }else{
-        printf("file nao existe!\n");
+        puts("[ERROR] File does not exist");
     }
 }
 

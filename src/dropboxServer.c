@@ -86,6 +86,8 @@ void *atendeCliente(void *socket){
         }          
     }
 
+    socket = NULL;
+
     return 0;
 }
 
@@ -199,7 +201,7 @@ void send_file_servidor(int socket, char* usuario){
 
 int main(){
     
-    int socketServidor, novoSocket;
+    int socketServidor, novoSocket[10];
     struct sockaddr_storage depositoServidor[10];
     socklen_t tamanhoEndereco[10];
     pthread_t threads[10];
@@ -219,7 +221,7 @@ int main(){
         printf("\n[Server] Server waiting for client...\n");
         
         if ((listen(socketServidor,10)) != 0){
-            printf("[Server] Server is full. Try again later.\n");
+            printf("[ERROR] Server is full. Try again later.\n");
         }
 
         while (usados[cont] == 1){
@@ -228,21 +230,15 @@ int main(){
                 cont = 0;
         }
         
-        tamanhoEndereco[cont] = sizeof(depositoServidor);
-        novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
+        novoSocket[cont] = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
         puts("[Server] Client connected...");
-
-        while (usados[cont] == 1){
-            cont++;
-            if (cont == 10)
-                cont = 0;
-        }
 
         usados[cont] = 1;
         printf("[Server] Thread %d created \n", cont+1);
 
-        if (pthread_create(&threads[cont],NULL,atendeCliente,&novoSocket)){
-            puts("[Server] Error trying to create a thread ");
+        if (pthread_create(&threads[cont],NULL,atendeCliente,&novoSocket[cont])){
+            puts("[ERROR] Error trying to create a thread ");
             return 0;
         }
         
