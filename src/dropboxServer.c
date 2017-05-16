@@ -179,14 +179,14 @@ int main(){
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter
     
-    while (1){
+    while (1) {
         
         printf("\n[Server] Server waiting for client...\n");
         
         if ((listen(socketServidor,10)) != 0){
             printf("[Server] Server is full. Try again later.\n");
         }
-        
+
         tamanhoEndereco = sizeof depositoServidor;
         novoSocket = accept(socketServidor, (struct sockaddr *) &depositoServidor, &tamanhoEndereco);
         puts("[Server] Client connected...");

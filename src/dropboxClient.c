@@ -7,7 +7,7 @@
 //
 
 #include <stdio.h>
-//  #include <stdio_ext.h>
+#include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -54,13 +54,15 @@ int connect_server(char *host, int port){
 void get_info(char* buffer, char* mensagem){
 
     fflush(stdin);
-    fflush(stdin);//fpurge(stdin); //fpurge
+    fflush(stdin);
+    //__fpurge(stdin); //fpurge
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("[Client] Requested information: %s\n", buffer);
     fflush(stdin);
-    fflush(stdin);//fpurge(stdin);
+    fflush(stdin);
+    //__fpurge(stdin);
 }
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
@@ -69,12 +71,20 @@ void sync_client(){
    DIR *dir;
    struct dirent *dent;
    char *direcName;
-
-   get_info("Type the directory name that you wish to synchronize:", direcName);
-   //printf("Type the directory name that you wish to synchronize:");
-   //scanf("%s", direcName);
    
-   dir = opendir(direcName);   
+   //getchar();
+   get_info("Type the directory name that you wish to synchronize: ", direcName);
+
+   //printf("Type the directory name that you wish to synchronize: ");
+   //__fpurge(stdin);
+   //fgets(direcName, 50, stdin);
+   //scanf("%s", direcName);
+
+   printf("will strcat...\n");
+   strcat("sync_dir_/", direcName);
+   printf("DIR: %s\n", direcName);
+   
+   dir = opendir(direcName);
 
    if(dir != NULL){
         while((dent = readdir(dir)) != NULL){
@@ -86,8 +96,10 @@ void sync_client(){
                 printf("\n");
             }
         }
+        closedir(dir);
+    } else {
+        printf("Dir was not found.\n");
     }
-    closedir(dir);
 }
 
 // Envia um arquivo file para o servidor
