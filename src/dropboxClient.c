@@ -71,19 +71,16 @@ void get_info(char* buffer, char* mensagem){
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
-void sync_client(){
+void sync_client() {
    DIR *dir;
    struct dirent *dent;
-   char *direcName;
+   char direcName[TAM_MAX];
 
-   //get_info("Type the directory name that you wish to synchronize:", direcName);
-   printf("[Server] Type the directory name that you wish to synchronize:");
-   fflush(stdin);
-   fgets(direcName,50,stdin);
+   get_info(direcName, "[Server] Type the directory name that you wish to synchronize: ");
    strtok(direcName, "\n");
    
-   dir = opendir(direcName);   
-   
+   dir = opendir(direcName);
+
    if(dir != NULL){
         while((dent = readdir(dir)) != NULL){
             if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
@@ -94,7 +91,12 @@ void sync_client(){
                 printf("\n");
             }
         }
-    closedir(dir);
+        closedir(dir);
+    }
+    else {
+        printf("[ERROR ] Server could not find the specified directory.\n");
+        // char read = '\0';
+        // send(socket, &read, sizeof(read), 0);
     }
 }
 
