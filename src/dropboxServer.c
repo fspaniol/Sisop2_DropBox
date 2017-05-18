@@ -146,6 +146,12 @@ void receive_file(int socket, char* usuario){
         if (buffer[0] == '\0'){
             printf("[Server][User: %s] Client could not send file.\n", usuario);
             fclose(handler);
+
+            fseek (handler, 0, SEEK_END); //verifica qual o tamanho do arquivo
+            int size = ftell(handler);
+            if (-1 == size) {   
+                remove(diretorio); // se o arquivo nao existir, ele nao vai ser criado
+            }   
             return; 
         }
 
