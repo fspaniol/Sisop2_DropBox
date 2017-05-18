@@ -78,13 +78,12 @@ void sync_client(){
 
    //get_info("Type the directory name that you wish to synchronize:", direcName);
    printf("[Server] Type the directory name that you wish to synchronize:");
-   scanf("%s", direcName);
    fflush(stdin);
    fgets(direcName,50,stdin);
    strtok(direcName, "\n");
    
    dir = opendir(direcName);   
-
+   
    if(dir != NULL){
         while((dent = readdir(dir)) != NULL){
             if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
@@ -95,8 +94,8 @@ void sync_client(){
                 printf("\n");
             }
         }
-    }
     closedir(dir);
+    }
 }
 
 // Envia um arquivo file para o servidor
