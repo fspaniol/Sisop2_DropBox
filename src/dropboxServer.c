@@ -100,8 +100,8 @@ void *atendeCliente(void *indice){
 
 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 
-void sync_server(){
-    
+void sync_server() {
+
 }
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
