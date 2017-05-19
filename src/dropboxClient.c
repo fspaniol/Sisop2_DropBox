@@ -220,6 +220,11 @@ int main(int argc, char *argv[]){
 
     recv(socketCliente,&opcao,sizeof(opcao),0); // Recebe o aval do servidor
 
+    if (opcao == 0){
+        puts("Este usuario ja possui 2 conexoes abertas, desconectando...");
+        return 0;
+    }
+
     while (opcao != 0){
             
         imprimir_menu(argv[1]);

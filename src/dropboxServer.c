@@ -41,6 +41,19 @@ int criaSocketServidor(char *host, int port){
     return socketServidor;
 }
 
+int conta_conexoes_usuario(char *usuario){
+    int x, cont = 0;
+
+    for (x = 0; x < 10; x++){
+        if (strcmp(usuario,clientes[x].userid) == 0 && clientes[x].logged_in == 1)
+            cont++;
+    }
+
+    printf("[Server][User: %s] The client has %d connections... \n", usuario, cont);
+
+    return cont;
+}
+
 
 // Ve se o usuario ja possui uma pasta, se nao, cria
 void cria_pasta_usuario(char* usuario){
@@ -61,9 +74,7 @@ void cria_pasta_usuario(char* usuario){
 void *atendeCliente(void *indice){
     int *temp = (int *) indice;
     int index = *temp;
-
-    struct Client clienteLogado;
-    clienteLogado = clientes[index];
+    int conexoes;
 
     int opcao_recebida = 1;
 
@@ -71,25 +82,36 @@ void *atendeCliente(void *indice){
     int flag = 1;
     flag = htonl(flag);
 
-    recv(clienteLogado.devices[0], clienteLogado.userid, sizeof(usuario), 0); // Recebe o numero do usuario
-    cria_pasta_usuario(clienteLogado.userid);
-    send(clienteLogado.devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+    recv(clientes[index].devices[0],  clientes[index].userid, sizeof(usuario), 0); // Recebe o numero do usuario
+
+    conexoes = conta_conexoes_usuario(clientes[index].userid);
+
+    if (conexoes > 2){
+        printf("[Server][User: %s] The user already has 2 connections open, closing this one... \n", clientes[index].userid);
+        flag = 0;
+        flag = htonl(flag);
+        send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+        clientes[index].logged_in = 0;
+        return 0;
+    }
+    cria_pasta_usuario(clientes[index].userid);
+    send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
         
     while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
         opcao_recebida = 5;
         //puts("Estou esperando acao de algum cliente... \n");
             
-        recv(clienteLogado.devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
+        recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
         opcao_recebida = htonl(opcao_recebida);
             
         switch(opcao_recebida) {
             case 1: sync_server();
                 break;
-            case 2: receive_file(clienteLogado.devices[0], clienteLogado.userid);
+            case 2: receive_file(clientes[index].devices[0], clientes[index].userid);
                 break;
-            case 3: send_file_servidor(clienteLogado.devices[0], clienteLogado.userid);
+            case 3: send_file_servidor(clientes[index].devices[0], clientes[index].userid);
                 break;
-            case 0: printf("[Server][User: %s] Client %d disconnected.\n", clienteLogado.userid, index);
+            case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
     }
 
@@ -122,7 +144,7 @@ void receive_file(int socket, char* usuario){
     while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
     }
 
-    printf("[Server] The file to be sent by client is: %s\n", buffer); // Escreve o nome do arquivo
+    printf("[Server][User: %s] The file to be sent by client is: %s\n", usuario, buffer); // Escreve o nome do arquivo
     
     if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
         printf("[ERROR ][User: %s] Error sending acknowledgement to client for file receiving.", usuario); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
@@ -189,13 +211,13 @@ void send_file_servidor(int socket, char* usuario){
     if (bytesRecebidos < 0)
         printf("[ERROR ][[User: %s]] Error receiving the filename to be sent. \n", usuario);
     else
-        printf("[Server] The requested file by the client is: %s\n", buffer); // Escreve o nome do arquivo que o cliente quer
+        printf("[Server][User: %s] The requested file by the client is: %s\n", usuario, buffer); // Escreve o nome do arquivo que o cliente quer
 
     strcat(diretorio,buffer);
 
     //handler = fopen(diretorio,"r");
     if ((handler = fopen(diretorio, "r")) == NULL) {
-        puts("[ERROR ] Error sending the file.");
+        printf("[ERROR ][User: %s] Error sending the file. \n", usuario);
         return;
     }
 
