@@ -273,7 +273,7 @@ void list_files_server(int socket, char* usuario) {
 
 // Setando a conexão TCP com o cliente
 
-int main(){
+int main(int argc, char *argv[]){
     
     int socketServidor;
     struct sockaddr_storage depositoServidor[10];
@@ -284,8 +284,14 @@ int main(){
 
     for (int x = 0; x < 10; x++)
         clientes[x].logged_in = 0;
-    
-    socketServidor = criaSocketServidor("127.0.0.1", 53000);
+
+    if (argc < 2) {
+        printf("[Server] No server ip inserted. Hosting at default 127.0.0.1 : 53000.\n");
+        socketServidor = criaSocketServidor("127.0.0.1", 53000);
+    } else {
+        socketServidor = criaSocketServidor(argv[1],53000);
+        printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
+    }
     
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter
