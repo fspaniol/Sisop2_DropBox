@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <dirent.h>
 #include <time.h>
 #include <fcntl.h> 
 #include <unistd.h> 
@@ -110,6 +111,8 @@ void *atendeCliente(void *indice){
             case 2: receive_file(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 3: send_file_servidor(clientes[index].devices[0], clientes[index].userid);
+                break;
+            case 4: list_files_server(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -230,6 +233,42 @@ void send_file_servidor(int socket, char* usuario){
     }
 
     fclose(handler);
+}
+
+void list_files_server(int socket, char* usuario) {
+    
+    DIR *dir;
+    struct dirent *ent;
+    ssize_t bytesEnviados;
+
+    char userDir[100] = "sync_dir_";
+    strcat(userDir, usuario);
+    strcat(userDir, "/");
+
+    char userFiles[TAM_MAX] = "";
+    
+    if ((dir = opendir (userDir)) != NULL) {
+        printf("[SERVER] Reading client's directory...\n");
+
+        while ((ent = readdir (dir)) != NULL) {
+            strcat(userFiles, ent->d_name);
+            strcat(userFiles, "\n");
+        }
+        strcat(userFiles, "\0");
+        closedir (dir);
+
+        if ((bytesEnviados = send(socket, userFiles, TAM_MAX, 0)) < 0) {
+            printf("[ERROR ][User: %s] Error sending files list.", usuario);
+            return;
+        }
+
+    } else {
+      /* could not open directory */
+        printf("[ERROR ][User: %s] Server could not find user's directory.\n", usuario);
+      // perror ("");
+      // return EXIT_FAILURE;
+    }
+    printf("[SERVER][User: %s] Done! Client's directory successfully read and sent.\n", usuario);
 }
 
 // Setando a conexão TCP com o cliente

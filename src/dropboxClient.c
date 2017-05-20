@@ -193,6 +193,24 @@ void get_file(int socket){
     }
 }
 
+void list_files(int socket) {
+
+    char clientFiles[TAM_MAX]; // buffer
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+
+    while ((bytesRecebidos = recv(socket, clientFiles, sizeof(clientFiles), 0)) > 0){
+            if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+                puts("[ERROR ] Error when receiving client's directory information.");
+            }
+
+            printf("[CLIENT] Your files:\n");
+            puts(clientFiles);
+
+            bzero(clientFiles, TAM_MAX);
+            return;
+        }
+}
+
 // Fecha a conexão com o servidor.
 
 void close_connection(int socket){
@@ -244,6 +262,9 @@ int main(int argc, char *argv[]){
                 break;
             case 3: 
                 get_file(socketCliente);
+                break;
+            case 4:
+                list_files(socketCliente);
                 break;
             case 0: 
                 close_connection(socketCliente);         

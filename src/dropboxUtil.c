@@ -30,7 +30,7 @@ void imprimir_menu(char *user){
     puts("\t [1] to syncronize your directory.");
     puts("\t [2] to send a file to the server.");
     puts("\t [3] to receive a file from the server.");
-    puts("\t [4] to list your directory.");
+    puts("\t [4] to list the files in your directory.");
     puts("\t [0] to disconnect from the server.");
     printf(">> ");
 }

@@ -20,6 +20,8 @@ void send_file_cliente(int socket);               // Envia um arquivo file para 
 
 void get_file(int socket);                // Obtém um arquivo file do servidor. Deverá ser executada quando for realizar download de um arquivo, file -filename.ext
 
+void list_files(int socket); // Lista os arquivos contidos no diretório do cliente
+
 void close_connection();                  // Fecha a conexão com o servidor.
 
 void get_info(char* buffer, char* mensagem); // Pega alguma informacao do stdin e poe no buffer
