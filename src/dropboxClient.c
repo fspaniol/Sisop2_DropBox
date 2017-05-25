@@ -7,7 +7,6 @@
 //
 
 #include <stdio.h>
-//  #include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -29,6 +28,7 @@
 #define TAM_MAX 1024
 
 #if defined(__linux) || defined(__unix)
+#include <stdio_ext.h>
 #define fpurge __fpurge
 #endif
 
@@ -76,10 +76,12 @@ void get_info(char* buffer, char* mensagem){
 void sync_client() {
    DIR *dir;
    struct dirent *dent;
-   char direcName[TAM_MAX];
+   char direcBuffer[TAM_MAX];
    char listaString[1024] = "";
-   get_info(direcName, "[Server] Type the directory name that you wish to synchronize: ");
-   strtok(direcName, "\n");
+   get_info(direcBuffer, "[Server] Type the directory name that you wish to synchronize: ");
+   char direcName[TAM_MAX] = "./";
+   strcat(direcName, direcBuffer);
+   strcat(direcName, "/");
    
    dir = opendir(direcName);
 
@@ -87,49 +89,29 @@ void sync_client() {
         while((dent = readdir(dir)) != NULL){
             if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
 
-            }else
-            {
-                //printf("%s", dent->d_name);
-               // printf("\n");
-/*
-  struct stat foo;
-  time_t mtime;
-  struct utimbuf new_times;
-  
-	if (stat(dent->d_name, &foo) < 0) {
-    perror(dent->d_name);
-    //return 1;
-  }
-  mtime = foo.st_mtime;
+            } else {
 
+        		struct stat attrib;
+        		strcat(listaString, dent->d_name);
+                char path[TAM_MAX] = "";
+                strcat(path, direcName);
+        		strcat(path, dent->d_name);
 
-  new_times.actime = foo.st_atime; 
-  new_times.modtime = time(NULL);   
+                if (stat(path, &attrib) == 0) {
+               		char time[50];
+                		strftime(time, 50, "<%Y-%m-%d %H:%M:%S", localtime(&attrib.st_mtime));
 
-
-
-  if (utime(dent->d_name, &new_times) < 0) {
-    perror(dent->d_name);
-    //return 1;
-  }*/
-
-		struct stat attrib;
-		strcat(listaString, dent->d_name);
-		stat(dent->d_name, &attrib);
-		
-   		char time[50];
-    		strftime(time, 50, "<%Y-%m-%d %H:%M:%S", localtime(&attrib.st_mtime));
-
-		strcat(listaString, time);
-		strcat(listaString, "\n");
-
-
-	
-		
+            		strcat(listaString, time);
+            		strcat(listaString, "\n");
+                } else {
+                    strcat(listaString, "<\n");
+                }
             }
         }
-	printf("%s" , listaString);
         closedir(dir);
+    	printf("[Server] Requested information is: \n%s" , listaString);
+        
+        //ENVIA listaString PRO SERVER
     }
     else {
         printf("[ERROR ] Server could not find the specified directory.\n");
