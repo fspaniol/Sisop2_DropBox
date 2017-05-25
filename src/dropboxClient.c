@@ -75,7 +75,7 @@ void get_info(char* buffer, char* mensagem){
 
 void sync_client(int socket) {
    DIR *dir;
-   struct dirent *dent;
+   struct dirent *ent;
    char direcBuffer[TAM_MAX];
    char listaString[TAM_MAX] = "";
    get_info(direcBuffer, "[Server] Type the directory name that you wish to synchronize: ");
@@ -86,16 +86,16 @@ void sync_client(int socket) {
    dir = opendir(direcName);
 
    if(dir != NULL){
-        while((dent = readdir(dir)) != NULL){
-            if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
+        while((ent = readdir(dir)) != NULL){
+            if((strcmp(ent->d_name,".") != 0 && strcmp(ent->d_name,"..") != 0)) {
 
-            } else {
+                printf("F: %s\n", ent->d_name);
+        		strcat(listaString, ent->d_name);
 
-        		struct stat attrib;
-        		strcat(listaString, dent->d_name);
+                struct stat attrib;
                 char path[TAM_MAX] = "";
                 strcat(path, direcName);
-        		strcat(path, dent->d_name);
+        		strcat(path, ent->d_name);
 
                 if (stat(path, &attrib) == 0) {
                		char time[50];
@@ -130,10 +130,7 @@ void sync_client(int socket) {
             return;
         }
 
-        printf("Enviani\n");
-
-
-
+        printf("[Client] Client sent to server infos about your directory.\n");
     }
     else {
         printf("[ERROR ] Server could not find the specified directory.\n");

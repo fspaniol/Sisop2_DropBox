@@ -7,6 +7,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -143,10 +144,58 @@ void sync_server(int socket, char *usuario) {
     bytesRecebidos = 0;
 
     while((bytesRecebidos = recv(socket, &listaString, sizeof(listaString), 0)) < 0){
-        printf("recebani\n");
     }
 
-    printf("%s\n", listaString);
+    //Trata a string recebida...
+    struct file_info *listaArquivosClient[TAM_MAX];
+    struct file_info *arq = malloc(sizeof *arq);
+
+    int index = 0, indexFN = 0, indexLM = 0, indexLAC = 0;
+    int flagNome = 0;
+    char fileName[50] = "";
+    char lastModified[50] = "";
+
+    while(index < sizeof(listaString)) {
+        
+        switch (listaString[index]) {
+            case '\n':
+                strcpy(arq->name, fileName);
+                strcpy(arq->last_modified, lastModified);
+                listaArquivosClient[indexLAC] = arq;
+
+                arq = NULL;
+                arq = malloc(sizeof *arq);
+                memset(fileName, 0, sizeof(fileName));
+                memset(lastModified, 0, sizeof(lastModified));
+                flagNome = 0;
+                
+                indexLAC++;
+                indexFN = 0;
+                break;
+
+            case '<':
+                flagNome = 1;
+                indexLM = 0;
+                break;
+
+            default:
+                if (flagNome == 0) {
+                    fileName[indexFN] = listaString[index];
+                    indexFN++;
+                } else {
+                    lastModified[indexLM] = listaString[index];
+                    indexLM++;
+                }
+        }
+        index++;
+    }
+    
+    int i = 0;
+    printf("Listando arquivos recebidos...\n");
+    while (listaArquivosClient[i] != NULL) {
+        printf("Nome: %s \tData: %s\n", listaArquivosClient[i]->name, listaArquivosClient[i]->last_modified);
+        i++;
+    }
 }
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
