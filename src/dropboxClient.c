@@ -73,11 +73,11 @@ void get_info(char* buffer, char* mensagem){
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
-void sync_client() {
+void sync_client(int socket) {
    DIR *dir;
    struct dirent *dent;
    char direcBuffer[TAM_MAX];
-   char listaString[1024] = "";
+   char listaString[TAM_MAX] = "";
    get_info(direcBuffer, "[Server] Type the directory name that you wish to synchronize: ");
    char direcName[TAM_MAX] = "./";
    strcat(direcName, direcBuffer);
@@ -112,6 +112,28 @@ void sync_client() {
     	printf("[Server] Requested information is: \n%s" , listaString);
         
         //ENVIA listaString PRO SERVER
+
+        ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
+        int avalServidor = 0;
+
+        if ((bytesEnviados = send(socket, listaString, sizeof(listaString),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
+            puts("[ERROR] An error has occured while sending file request to server.");
+        return;
+        }
+
+        while(avalServidor == 0){
+            recv(socket,&avalServidor,sizeof(avalServidor),0); // Recebe a flag do servidor indicando que ja pode começar a enviar o arquivo
+        }
+
+        if ((bytesEnviados = send(socket,listaString, sizeof(listaString), 0)) < 0) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+            puts("[ERROR] Error while sending the file.");
+            return;
+        }
+
+        printf("Enviani\n");
+
+
+
     }
     else {
         printf("[ERROR ] Server could not find the specified directory.\n");
@@ -276,7 +298,7 @@ int main(int argc, char *argv[]){
         
         switch(opcao) {
             case 1: 
-                sync_client();
+                sync_client(socketCliente);
                 break;
             case 2:
                 send_file_cliente(socketCliente);

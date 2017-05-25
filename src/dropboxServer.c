@@ -106,7 +106,7 @@ void *atendeCliente(void *indice){
         opcao_recebida = htonl(opcao_recebida);
             
         switch(opcao_recebida) {
-            case 1: sync_server();
+            case 1: sync_server(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 2: receive_file(clientes[index].devices[0], clientes[index].userid);
                 break;
@@ -125,8 +125,28 @@ void *atendeCliente(void *indice){
 
 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 
-void sync_server() {
+void sync_server(int socket, char *usuario) {
 
+    char listaString[TAM_MAX] = "";
+    int flag = 1;
+    flag = htonl(flag);
+    int bytesRecebidos = 0;
+
+    while((bytesRecebidos = recv(socket, &listaString, sizeof(listaString), 0)) < 0){ // recebe do usuario que opção ele quer
+    }
+
+    if ((send(socket, &flag, sizeof(flag), 0)) < 0){
+        printf("[ERROR ][User: %s] Error sending acknowledgement to client for file receiving.", usuario); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
+        return;
+    }
+
+    bytesRecebidos = 0;
+
+    while((bytesRecebidos = recv(socket, &listaString, sizeof(listaString), 0)) < 0){
+        printf("recebani\n");
+    }
+
+    printf("%s\n", listaString);
 }
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
