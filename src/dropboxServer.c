@@ -251,10 +251,18 @@ void list_files_server(int socket, char* usuario) {
         printf("[SERVER] Reading client's directory...\n");
 
         while ((ent = readdir (dir)) != NULL) {
-            strcat(userFiles, ent->d_name);
-            strcat(userFiles, "\n");
+
+            if((strcmp(ent->d_name,".") != 0 && strcmp(ent->d_name,"..") != 0)) {
+                strcat(userFiles, ent->d_name);
+                strcat(userFiles, "\n");
+            }
+        }
+        
+        if (strcmp(userFiles, "") == 0) {
+            strcat(userFiles, "You have no files!");
         }
         strcat(userFiles, "\0");
+        
         closedir (dir);
 
         if ((bytesEnviados = send(socket, userFiles, TAM_MAX, 0)) < 0) {
