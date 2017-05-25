@@ -15,8 +15,10 @@
 #include <fcntl.h> 
 #include <unistd.h> 
 #include <arpa/inet.h>  
-
+#include <time.h>
+#include <utime.h>
 ///////////////////
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <dirent.h>
 ///////////////////
@@ -75,7 +77,7 @@ void sync_client() {
    DIR *dir;
    struct dirent *dent;
    char direcName[TAM_MAX];
-
+   char listaString[1024] = "";
    get_info(direcName, "[Server] Type the directory name that you wish to synchronize: ");
    strtok(direcName, "\n");
    
@@ -87,10 +89,46 @@ void sync_client() {
 
             }else
             {
-                printf("%s", dent->d_name);
-                printf("\n");
+                //printf("%s", dent->d_name);
+               // printf("\n");
+/*
+  struct stat foo;
+  time_t mtime;
+  struct utimbuf new_times;
+  
+	if (stat(dent->d_name, &foo) < 0) {
+    perror(dent->d_name);
+    //return 1;
+  }
+  mtime = foo.st_mtime;
+
+
+  new_times.actime = foo.st_atime; 
+  new_times.modtime = time(NULL);   
+
+
+
+  if (utime(dent->d_name, &new_times) < 0) {
+    perror(dent->d_name);
+    //return 1;
+  }*/
+
+		struct stat attrib;
+		strcat(listaString, dent->d_name);
+		stat(dent->d_name, &attrib);
+		
+   		char time[50];
+    		strftime(time, 50, "<%Y-%m-%d %H:%M:%S", localtime(&attrib.st_mtime));
+
+		strcat(listaString, time);
+		strcat(listaString, "\n");
+
+
+	
+		
             }
         }
+	printf("%s" , listaString);
         closedir(dir);
     }
     else {
@@ -98,6 +136,7 @@ void sync_client() {
         // char read = '\0';
         // send(socket, &read, sizeof(read), 0);
     }
+   
 }
 
 // Envia um arquivo file para o servidor
