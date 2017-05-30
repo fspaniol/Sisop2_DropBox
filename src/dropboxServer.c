@@ -55,6 +55,32 @@ int conta_conexoes_usuario(char *usuario){
     return cont;
 }
 
+void *daemonMain(void *parametros){
+
+    int x;
+
+    printf("[Daemon] Daemon thread initialized \n");
+
+    while(1){
+
+        printf("[Daemon] Daemon just woke up! \n");
+
+        for (x = 0; x < 10; x++){
+            if (clientes[x].logged_in == 1)
+                printf("[Daemon] Client %d is connected! \n", x);
+            else
+                printf("[Daemon] Client %d is not connected! \n", x);
+
+        }
+
+        printf("[Daemon] Daemon will sleep for 10 seconds \n");
+
+        sleep(10);
+    }
+
+    return 0;
+}
+
 
 // Ve se o usuario ja possui uma pasta, se nao, cria
 void cria_pasta_usuario(char* usuario){
@@ -287,6 +313,7 @@ int main(int argc, char *argv[]){
     struct sockaddr_storage depositoServidor[10];
     socklen_t tamanhoEndereco[10];
     pthread_t threads[10];
+    pthread_t daemon;
     int cont = 0;
     int cont2;
 
@@ -303,6 +330,11 @@ int main(int argc, char *argv[]){
     
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter
+
+    if (pthread_create(&daemon,NULL,daemonMain,NULL)){
+        puts("[ERROR] Error trying to create a Daemon thread ");
+        return 0;
+    }
     
     while (1){
         

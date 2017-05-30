@@ -35,7 +35,9 @@ void receive_file(int socket, char* usuario);      // Recebe um arquivo file do 
 
 void send_file_servidor(int socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
-void list_files_server(int socket, char* usuario);
+void list_files_server(int socket, char* usuario); // Lista todos os files do diretório de cada usuário
+
+void *daemonMain(void *parametros); // Thread daemon que faz o sync
 
 void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
 
