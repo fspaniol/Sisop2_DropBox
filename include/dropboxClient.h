@@ -14,7 +14,7 @@
 
 int connect_server(char *host, int port); // Conecta o cliente com o servidor, host - endereço do servidor, port - porta aguardando conexão
 
-void sync_client();                       // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
+void sync_client(int socketCliente);                       // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
 void send_file_cliente(int socket);               // Envia um arquivo file para o servidor. Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 
@@ -25,5 +25,9 @@ void list_files(int socket); // Lista os arquivos contidos no diretório do clie
 void close_connection();                  // Fecha a conexão com o servidor.
 
 void get_info(char* buffer, char* mensagem); // Pega alguma informacao do stdin e poe no buffer
+
+void *daemonMain(void *parametros); // Funcao que faz a sincronizacao do cliente a cada 10 minutos
+
+void send_file_sync(int socket, char* arquivo); // Envia arquivos quando sincronizando
 
 #endif /* dropboxClient_h */

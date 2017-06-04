@@ -30,6 +30,104 @@
 #define fpurge __fpurge
 #endif
 
+int semaforo = 0;
+
+void *daemonMain(void *parametros){
+
+    int *temp = (int *) parametros;
+    int socketCliente = *temp;
+
+    printf("\n [DAEMON] Daemon thread initialized \n");
+
+    while (1){
+        while (semaforo == 1){
+
+        }
+        semaforo = 1;
+        printf("[DAEMON] Synchronizing the folder \n");
+        sync_client(socketCliente);
+        printf("[DAEMON] Synchronization done \n");
+        semaforo = 0;
+        sleep(10);
+
+    }
+
+    return 0;
+}
+
+void sync_client(int socketCliente){
+
+    int opcao = 4;
+    opcao = htonl(opcao);
+    char clientFiles[TAM_MAX]; // buffer
+    int x = 0;
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+
+    send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
+
+    bytesRecebidos = recv(socketCliente, clientFiles, sizeof(clientFiles), 0);
+
+    char *ch;
+    ch = strtok(clientFiles, "\n");
+
+    while (ch != NULL) {
+        printf("[DAEMON] Synchronizing file: %s \n", ch);
+        send_file_sync(socketCliente,ch);
+        usleep(10); // Da uma dormidinha minima de 10 milisegundo, para conseguir sincronizar as coisas
+        ch = strtok(NULL, "\n");
+    }
+
+}
+
+void send_file_sync(int socket, char* arquivo){
+    
+    //puts("\n[Client] entered 'Send file client' function");
+
+    FILE* handler; // Inteiro para a manipulação do arquivo que tentaremos abrir
+    ssize_t bytesLidos = 0; // Estrutura para guardar a quantidade de bytes lios pelo sistema
+    ssize_t bytesEnviados = 0; // Estrutura para guardar a quantidade de bytes enviados para o servidor
+    ssize_t tamanhoArquivoEnviado = 0;
+    char buffer[TAM_MAX]; // Buffer que armazena os pacotes para enviar
+    int qtdePacotes = 0;
+    int avalServidor = 0;
+    int opcao = 2;
+    opcao = htonl(opcao);
+
+    strcpy(buffer,arquivo);
+
+    send(socket,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
+
+
+    if ((bytesEnviados = send(socket,buffer,sizeof(buffer),0)) < 0) { // Envia o nome do arquivo que ira ser mandado para o servidor, por enquanto hardcoded "recebido.txt"
+        puts("[ERROR] An error has occured while sending file request to server.");
+        return;
+    }
+
+    while(avalServidor == 0){
+        recv(socket,&avalServidor,sizeof(avalServidor),0); // Recebe a flag do servidor indicando que ja pode começar a enviar o arquivo
+    }
+
+    if ((handler = fopen(buffer, "r")) == NULL){ // Se f for menor que 0, quer dizer que o sistema não conseguiu abrir o arquivo
+        puts("[ERROR] File not found."); // Nem precisa informar o servidor, creio eu PRECISA S
+        char read = '\0';
+        send(socket, &read, sizeof(read), 0);
+        return;
+    }
+
+    else{
+        bzero(buffer, TAM_MAX); // Limpa o buffer
+        while ((bytesLidos = fread(buffer, 1, sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+            if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+                puts("[ERROR] Error while sending the file.");
+                return;
+            }
+            bzero(buffer, TAM_MAX); // Limpa o buffer
+            qtdePacotes++;
+            tamanhoArquivoEnviado += bytesEnviados;
+        }
+        fclose(handler);
+    }
+}
 
 // Conecta o cliente com o servidor
 // Host - endereço do servidor
@@ -71,7 +169,7 @@ void get_info(char* buffer, char* mensagem){
 
 // Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
 
-void sync_client() {
+/*void sync_client() {
    DIR *dir;
    struct dirent *dent;
    char direcName[TAM_MAX];
@@ -98,7 +196,7 @@ void sync_client() {
         // char read = '\0';
         // send(socket, &read, sizeof(read), 0);
     }
-}
+}*/
 
 // Envia um arquivo file para o servidor
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
@@ -226,6 +324,7 @@ int main(int argc, char *argv[]){
     int opcao = 1;
     int opcao_convertida;
     char* usuario;
+    pthread_t daemon;
 
     if (argc < 3) {
         printf("[Client] Please, insert your login and the desired IP to connect...\n");
@@ -233,6 +332,7 @@ int main(int argc, char *argv[]){
     } 
 
     socketCliente = connect_server(argv[2],53000);
+
 
     send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
 
@@ -243,19 +343,30 @@ int main(int argc, char *argv[]){
         return 0;
     }
 
+    if (pthread_create(&daemon,NULL,daemonMain, &socketCliente)){
+        puts("[ERROR] Error trying to create a Daemon thread ");
+        return 0;
+    }
+
     while (opcao != 0){
+
+        while (semaforo == 1){
             
+        }
+
         imprimir_menu(argv[1]);
         
         scanf("%d", &opcao);
         opcao_convertida = htonl(opcao);
-        
+
+
+        semaforo = 1;
         
         send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0); // Informa o servidor qual a opção que ele vai realizar
         
         switch(opcao) {
             case 1: 
-                sync_client();
+                sync_client(socketCliente);
                 break;
             case 2:
                 send_file_cliente(socketCliente);
@@ -269,6 +380,8 @@ int main(int argc, char *argv[]){
             case 0: 
                 close_connection(socketCliente);         
         }
+
+        semaforo = 0;
         
     }
     

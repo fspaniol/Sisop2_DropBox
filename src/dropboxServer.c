@@ -328,13 +328,14 @@ int main(int argc, char *argv[]){
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
     }
     
-    // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
-    // O segundo parametro do listen diz quantas conexões podemos ter
 
-    if (pthread_create(&daemon,NULL,daemonMain,NULL)){
+    /*if (pthread_create(&daemon,NULL,daemonMain,NULL)){
         puts("[ERROR] Error trying to create a Daemon thread ");
         return 0;
-    }
+    }*/
+
+    // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
+    // O segundo parametro do listen diz quantas conexões podemos ter
     
     while (1){
         
