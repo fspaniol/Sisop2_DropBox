@@ -6,6 +6,8 @@
 //
 //
 
+
+#include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -125,7 +127,7 @@ void *atendeCliente(void *indice){
     send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
         
     while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
-        opcao_recebida = 5;
+        opcao_recebida = 6;
         //puts("Estou esperando acao de algum cliente... \n");
             
         recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
@@ -139,6 +141,8 @@ void *atendeCliente(void *indice){
             case 3: send_file_servidor(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 4: list_files_server(clientes[index].devices[0], clientes[index].userid);
+                break;
+            case 5: send_time_modified(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -154,7 +158,6 @@ void *atendeCliente(void *indice){
 void sync_server() {
 
 }
-
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
 void receive_file(int socket, char* usuario){
@@ -222,7 +225,7 @@ void receive_file(int socket, char* usuario){
 
 void send_file_servidor(int socket, char* usuario){
 
-    char diretorio[100] = "sync_dir_";
+    char diretorio[200] = "sync_dir_";
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
@@ -260,6 +263,32 @@ void send_file_servidor(int socket, char* usuario){
 
     fclose(handler);
 }
+
+
+void send_time_modified(int socket, char* usuario){
+    char buffer[TAM_MAX];
+    struct stat *horario = malloc(sizeof(struct stat));
+    char diretorio[200] = "sync_dir_";
+    strcat(diretorio,usuario);
+    strcat(diretorio,"/");
+    ssize_t bytesRecebidos;
+    time_t horario_modificado;
+
+    bytesRecebidos = recv(socket, buffer, TAM_MAX, 0);
+
+    strcat(diretorio,buffer);
+
+    if (lstat(diretorio, horario) != 0) {
+        printf("[SERVER][USER: %s] Error sending the date of the file \n", usuario);
+        return;
+    }
+    
+    horario_modificado = horario->st_mtime;
+
+    bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+
+}
+
 
 void list_files_server(int socket, char* usuario) {
     
@@ -304,6 +333,7 @@ void list_files_server(int socket, char* usuario) {
     }
     printf("[SERVER][User: %s] Done! Client's directory successfully read and sent.\n", usuario);
 }
+
 
 // Setando a conexão TCP com o cliente
 

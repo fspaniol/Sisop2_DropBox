@@ -23,6 +23,7 @@
 
 #include "../include/dropboxClient.h"
 #include "dropboxUtil.c"
+#include <sys/stat.h>
 
 #define TAM_MAX 1024
 
@@ -31,6 +32,7 @@
 #endif
 
 int semaforo = 0;
+time_t ultimo_sync = 0;
 
 void *daemonMain(void *parametros){
 
@@ -62,21 +64,65 @@ void sync_client(int socketCliente){
     char clientFiles[TAM_MAX]; // buffer
     int x = 0;
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+    time_t horario_servidor;
+    time_t horario_cliente;
+    time_t melhor = 0;
+    struct stat *arquivo_cliente = malloc(sizeof(struct stat));
 
     send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
 
     bytesRecebidos = recv(socketCliente, clientFiles, sizeof(clientFiles), 0);
 
+    if (strcmp("You have no files!",clientFiles) == 0)
+        return;
+
     char *ch;
     ch = strtok(clientFiles, "\n");
+    char buffer[TAM_MAX];
+    bzero(buffer,TAM_MAX);
 
     while (ch != NULL) {
+        opcao = 5;
+        opcao = htonl(opcao);
+        strcat(buffer,ch);
+        send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
+        send(socketCliente,buffer,sizeof(buffer),0); // Informa o servidor qual a opção que ele vai realizar
+        bzero(buffer,TAM_MAX);
+
+        if (lstat(ch, arquivo_cliente) != 0) {
+            horario_cliente = 0;
+        }
+        else{
+            horario_cliente = arquivo_cliente->st_mtime;
+        }
+
         printf("[DAEMON] Synchronizing file: %s \n", ch);
-        send_file_sync(socketCliente,ch);
-        usleep(10); // Da uma dormidinha minima de 10 milisegundo, para conseguir sincronizar as coisas
+
+        bytesRecebidos = recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
+
+        if (horario_cliente > horario_servidor && horario_cliente > ultimo_sync){
+            printf("[DAEMON] File: %s being sent to the server \n", ch);
+            send_file_sync(socketCliente,ch);
+            if (horario_cliente > melhor)
+                melhor = horario_cliente;
+        }
+        else{
+            if(horario_servidor > horario_cliente && horario_servidor > ultimo_sync){
+                printf("[DAEMON] File: %s being received from the server \n", ch);
+                get_file_sync(socketCliente,ch);
+                if (horario_servidor > melhor)
+                melhor = horario_servidor;
+            }
+            else
+                printf("[DAEMON] File: %s does not need to be changed\n", ch);
+        }
+        usleep(10); // Da uma dormidinha minima de 10 milisegundo, para conseguir sincronizar as coisas*/
         ch = strtok(NULL, "\n");
     }
-
+    if (melhor > ultimo_sync)
+        ultimo_sync = melhor + 30; // Esses 60 são adicionados porque o server eh mais lento entao ele grava depois
+    else
+        ultimo_sync -= 10; // Para ter certeza que esses 40 somados anteriormente não afetem, a cada vez não modificadas, vamos diminuir 10 para atualizar a cada pouco
 }
 
 void send_file_sync(int socket, char* arquivo){
@@ -127,6 +173,42 @@ void send_file_sync(int socket, char* arquivo){
         }
         fclose(handler);
     }
+}
+
+void get_file_sync(int socket, char* arquivo){
+    char buffer[TAM_MAX]; // buffer
+    FILE* handler; // handler do arquivo
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+    int opcao = 3;
+    opcao = htonl(opcao);
+
+    bzero(buffer, TAM_MAX);
+    strcat(buffer,arquivo);
+
+    send(socket,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
+
+    if ((send(socket,buffer,sizeof(buffer),0)) < 0){ // Envia o nome do arquivo que deseja receber pro Servidor
+        puts("[ERROR] Error while sending the filename...");
+        exit(1);
+    }
+    handler = fopen(buffer,"w"); // Abre o arquivo no qual vai armazenar as coisas
+
+        bzero(buffer, TAM_MAX);
+
+        while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
+            if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+                puts("[ERROR] Error when receiving client's packages.");
+            }
+
+            fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+            bzero(buffer, TAM_MAX);
+
+            if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+                fclose(handler);
+                return;
+            }
+        }
 }
 
 // Conecta o cliente com o servidor
