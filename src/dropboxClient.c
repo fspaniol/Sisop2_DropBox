@@ -272,37 +272,6 @@ void get_info(char* buffer, char* mensagem){
 
 }
 
-// Sincroniza o diretório "sync_dir_<nomeusuário>" com o servidor
-
-/*void sync_client() {
-   DIR *dir;
-   struct dirent *dent;
-   char direcName[TAM_MAX];
-
-   get_info(direcName, "[Server] Type the directory name that you wish to synchronize: ");
-   strtok(direcName, "\n");
-   
-   dir = opendir(direcName);
-
-   if(dir != NULL){
-        while((dent = readdir(dir)) != NULL){
-            if((strcmp(dent->d_name,".") == 0 || strcmp(dent->d_name,"..") == 0 || (*dent->d_name) == '.' )){
-
-            }else
-            {
-                printf("%s", dent->d_name);
-                printf("\n");
-            }
-        }
-        closedir(dir);
-    }
-    else {
-        printf("[ERROR ] Server could not find the specified directory.\n");
-        // char read = '\0';
-        // send(socket, &read, sizeof(read), 0);
-    }
-}*/
-
 // Envia um arquivo file para o servidor
 // Deverá ser executada quando for realizar upload de um arquivo, file - path/filename.ext do arquivo a ser enviado
 

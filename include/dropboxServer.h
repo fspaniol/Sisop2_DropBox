@@ -39,8 +39,6 @@ void send_file_servidor(int socket, char* usuario);         // Envia o arquivo f
 
 void list_files_server(int socket, char* usuario); // Lista todos os files do diretório de cada usuário
 
-void *daemonMain(void *parametros); // Thread daemon que faz o sync
-
 void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
 
 void *atendeCliente(void *indice); // Menu principal para atender a cada usuario
