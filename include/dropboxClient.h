@@ -30,4 +30,6 @@ void *daemonMain(void *parametros); // Funcao que faz a sincronizacao do cliente
 
 void send_file_sync(int socket, char* arquivo); // Envia arquivos quando sincronizando
 
+void get_file_sync(int socket, char* arquivo); // Recebe arquivos quando sincronizando
+
 #endif /* dropboxClient_h */

@@ -45,4 +45,6 @@ void *atendeCliente(void *indice); // Menu principal para atender a cada usuario
 
 int conta_conexoes_usuario(char *usuario); // Conta as conexoes presentes para um usuario
 
+void send_time_modified(int socket, char* usuario); // Envia a data quando o arquivo foi modificado
+
 #endif /* dropboxServer_h */
