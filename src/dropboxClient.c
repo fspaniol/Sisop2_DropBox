@@ -7,7 +7,6 @@
 //
 
 #include <stdio.h>
-//  #include <stdio_ext.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -26,8 +25,8 @@
 
 #define TAM_MAX 1024
 
-#if defined(__linux) || defined(__unix)
-#define fpurge __fpurge
+#if defined(__linux)
+#include <stdio_ext.h>
 #endif
 
 int semaforo = 0;
@@ -156,14 +155,26 @@ int connect_server(char *host, int port){
 
 void get_info(char* buffer, char* mensagem){
 
+    #if defined(__linux)
+    __fpurge(stdin);
+    
+    #elif(__APPLE__)
     fpurge(stdin);
+    
+    #endif
 
     printf("\n %s ", mensagem);
     fgets(buffer,50,stdin);
     strtok(buffer, "\n");
     printf("[Client] Requested information: %s\n", buffer);
 
+    #if defined(__linux)
+    __fpurge(stdin);
+    
+    #elif(__APPLE__)
     fpurge(stdin);
+    
+    #endif
 
 }
 
