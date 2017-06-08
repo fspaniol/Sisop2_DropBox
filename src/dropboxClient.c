@@ -32,6 +32,7 @@
 
 int semaforo = 0;
 time_t ultimo_sync = 0;
+time_t ultimo_sync_parcial = 0;
 
 void *daemonMain(void *parametros){
 
@@ -65,7 +66,6 @@ void sync_client(int socketCliente){
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
     time_t horario_servidor;
     time_t horario_cliente;
-    time_t melhor = 0;
     struct stat *arquivo_cliente = malloc(sizeof(struct stat));
 
     send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
@@ -99,18 +99,18 @@ void sync_client(int socketCliente){
 
         bytesRecebidos = recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
 
+        /*printf("Cliente: %zd \n", horario_cliente);
+        printf("Servidor: %zd \n", horario_servidor);
+        printf("ultimo_sync: %zd \n", ultimo_sync);*/
+
         if (horario_cliente > horario_servidor && horario_cliente > ultimo_sync){
             printf("[DAEMON] File: %s being sent to the server \n", ch);
             send_file_sync(socketCliente,ch);
-            if (horario_cliente > melhor)
-                melhor = horario_cliente;
         }
         else{
             if(horario_servidor > horario_cliente && horario_servidor > ultimo_sync){
                 printf("[DAEMON] File: %s being received from the server \n", ch);
                 get_file_sync(socketCliente,ch);
-                if (horario_servidor > melhor)
-                melhor = horario_servidor;
             }
             else
                 printf("[DAEMON] File: %s does not need to be changed\n", ch);
@@ -118,10 +118,7 @@ void sync_client(int socketCliente){
         usleep(10); // Da uma dormidinha minima de 10 milisegundo, para conseguir sincronizar as coisas*/
         ch = strtok(NULL, "\n");
     }
-    if (melhor > ultimo_sync)
-        ultimo_sync = melhor + 30; // Esses 60 são adicionados porque o server eh mais lento entao ele grava depois
-    else
-        ultimo_sync -= 10; // Para ter certeza que esses 40 somados anteriormente não afetem, a cada vez não modificadas, vamos diminuir 10 para atualizar a cada pouco
+    ultimo_sync = ultimo_sync_parcial;
 }
 
 void send_file_sync(int socket, char* arquivo){
@@ -135,8 +132,11 @@ void send_file_sync(int socket, char* arquivo){
     char buffer[TAM_MAX]; // Buffer que armazena os pacotes para enviar
     int qtdePacotes = 0;
     int avalServidor = 0;
-    int opcao = 2;
+    int opcao = 6;
     opcao = htonl(opcao);
+    struct stat *time_modified = malloc(sizeof(struct stat));
+    ssize_t enviado;
+    time_t time_dummy;
 
     strcpy(buffer,arquivo);
 
@@ -172,6 +172,9 @@ void send_file_sync(int socket, char* arquivo){
         }
         fclose(handler);
     }
+    enviado = recv(socket,&time_dummy,sizeof(time_dummy),0);
+    if (time_dummy > ultimo_sync_parcial)
+        ultimo_sync_parcial = time_dummy;
 }
 
 void get_file_sync(int socket, char* arquivo){
@@ -183,6 +186,8 @@ void get_file_sync(int socket, char* arquivo){
 
     bzero(buffer, TAM_MAX);
     strcat(buffer,arquivo);
+
+    struct stat *time_modified = malloc(sizeof(struct stat));
 
     send(socket,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
 
@@ -205,6 +210,13 @@ void get_file_sync(int socket, char* arquivo){
 
             if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
                 fclose(handler);
+                if (lstat(arquivo, time_modified) != 0) {
+                    printf("[ERROR] Error trying to get the time when changed");
+                 }
+                else{
+                    if (time_modified->st_mtime > ultimo_sync_parcial)
+                        ultimo_sync_parcial = time_modified->st_mtime;
+                }
                 return;
             }
         }

@@ -127,7 +127,7 @@ void *atendeCliente(void *indice){
     send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
         
     while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
-        opcao_recebida = 6;
+        opcao_recebida = 7;
         //puts("Estou esperando acao de algum cliente... \n");
             
         recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
@@ -143,6 +143,8 @@ void *atendeCliente(void *indice){
             case 4: list_files_server(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 5: send_time_modified(clientes[index].devices[0], clientes[index].userid);
+                break;
+            case 6: receive_file_sync(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -218,6 +220,79 @@ void receive_file(int socket, char* usuario){
             printf("[Server][User: %s] Successfully received client file.\n", usuario);
     		return;
     	}
+    }
+}
+
+void receive_file_sync(int socket, char* usuario){
+    printf("[Server][User: %s] Server will receive file from client.\n", usuario);
+    char buffer[TAM_MAX]; // Buffer que armazena os pacotes que vem sido recebidos
+    ssize_t bytesRecebidos = 0; // Quantidade de bytes que foram recebidos numa passagem
+    ssize_t bytesEnviados; 
+    FILE* handler; // Inteiro para manipulação do arquivo que botaremos no servidor
+    bzero(buffer, TAM_MAX);
+    int flag = 1;
+    flag = htonl(flag);
+    char diretorio[100] = "sync_dir_";
+    strcat(diretorio,usuario);
+    strcat(diretorio,"/");
+    struct stat *time_modified = malloc(sizeof(struct stat));
+    time_t horario_modificado;
+
+    while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    }
+
+    printf("[Server][User: %s] The file to be sent by client is: %s\n", usuario, buffer); // Escreve o nome do arquivo
+    
+    if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+        printf("[ERROR ][User: %s] Error sending acknowledgement to client for file receiving.", usuario); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
+        return;
+    }
+
+    strcat(diretorio,buffer);
+
+    bytesRecebidos = 0; // Reseta o numero de bytes lidos
+
+    handler = fopen(diretorio, "w"); // Abre o arquivo 
+
+    bzero(buffer, TAM_MAX); // Reseta o buffer
+
+    while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+        if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+            printf("[ERROR ][User: %s] Error when trying to receive client package.\n", usuario);
+            fclose(handler);
+            return;
+        }
+        if (buffer[0] == '\0'){
+            printf("[Server][User: %s] Client could not send file.\n", usuario);
+            fclose(handler);
+
+            fseek (handler, 0, SEEK_END); //verifica qual o tamanho do arquivo
+            int size = ftell(handler);
+            if (-1 == size) {   
+                remove(diretorio); // se o arquivo nao existir, ele nao vai ser criado
+            }   
+            return; 
+        }
+
+        fwrite(buffer, 1, bytesRecebidos, handler); // Escreve no arquivo
+
+        bzero(buffer, TAM_MAX); // Reseta o buffer
+
+        if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+            fclose(handler);
+            printf("[Server][User: %s] Successfully received client file.\n", usuario);
+
+            lstat(diretorio,time_modified);
+            horario_modificado = time_modified->st_mtime;
+
+            bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+            return;
+        }
+    }
+
+    if (lstat(diretorio, time_modified) != 0) {
+        printf("[SERVER][USER: %s] Error sending the date of the file \n", usuario);
+        return;
     }
 }
 

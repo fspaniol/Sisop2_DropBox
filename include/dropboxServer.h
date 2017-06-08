@@ -33,6 +33,8 @@ void sync_server();                 // Sincroniza o servidor com o diretório "s
 
 void receive_file(int socket, char* usuario);      // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
+void receive_file_sync(int socket, char* usuario); // Recebe o arquivo e envia de volta o tempo no qual foi modificado
+
 void send_file_servidor(int socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
 void list_files_server(int socket, char* usuario); // Lista todos os files do diretório de cada usuário
