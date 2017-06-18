@@ -6,13 +6,23 @@ Criar um dropbox no modelo Cliente Servidor com o uso de Sockets.
 
 Problemas na versão atual:
 
-Falta fazer a sincronização dos folders ambos do cliente e do servidor.
+Servidor não reconhece a deleção de arquivos
 
-Falta fazer o dropboxServer sempre pegar o localhost como default, como feito no exemplo pelo Alberto.
+Não é possivel pegar arquivos de qualquer lugar do computador
 
-Tem que usar as estruturas fornecidas pelo professor para armazenar os dados dos clientes e dos arquivos.
+O que fazer para a segunda parte:
 
-Todas threads usam o mesmo valor em indice, então ao tentarem sinalizar que estão desconectadas, sempre sinalizam que a ultima conectada se desconectou
+1 - Sincronização de relógios
+
+2 - Replicação passiva
+
+3 - Autenticação do Cliente/Servidor e comunicação Segura
+
+De agora em diante, na hora de compilar o servidor e o cliente, tem que usar as flags -lssl -lcrypto
+
+Não esquecer de relatar problemas encontrados para botar no relatório
+
+
 
 Detalhes: Os arquivos estão sendo mandados não como um stream de bytes, mas como blocos de 1024 bytes, isso facilita a criação dos buffers
 e não da overload no sistema e sockets como um todo.

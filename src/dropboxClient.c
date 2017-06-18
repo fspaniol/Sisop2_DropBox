@@ -57,6 +57,11 @@ void *daemonMain(void *parametros){
     return 0;
 }
 
+int getTimeServer(){
+
+    return 0;
+}
+
 void sync_client(int socketCliente){
 
     int opcao = 4;

@@ -25,6 +25,7 @@
 #define TAM_MAX 1024
 
 struct Client clientes[10];
+int semaforo = 0;
 //Cria o socket do servidor
 
 int criaSocketServidor(char *host, int port){
@@ -47,12 +48,20 @@ int criaSocketServidor(char *host, int port){
 int conta_conexoes_usuario(char *usuario){
     int x, cont = 0;
 
+    while (semaforo == 1){
+
+    }
+
+    semaforo = 1;
+
     for (x = 0; x < 10; x++){
         if (strcmp(usuario,clientes[x].userid) == 0 && clientes[x].logged_in == 1)
             cont++;
     }
 
     printf("[Server][User: %s] The client has %d connections... \n", usuario, cont);
+
+    semaforo = 0;
 
     return cont;
 }
@@ -381,6 +390,11 @@ void list_files_server(int socket, char* usuario) {
       // return EXIT_FAILURE;
     }
     printf("[SERVER][User: %s] Done! Client's directory successfully read and sent.\n", usuario);
+}
+
+int updateReplicas(){
+
+    return 0;
 }
 
 
