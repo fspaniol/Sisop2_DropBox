@@ -16,6 +16,7 @@
 #include <arpa/inet.h>  
 
 ///////////////////
+#include <sys/time.h>
 #include <sys/types.h>
 #include <dirent.h>
 ///////////////////
@@ -33,6 +34,8 @@
 int semaforo = 0;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
+
+struct timeval tv;
 
 void *daemonMain(void *parametros){
 
@@ -57,9 +60,25 @@ void *daemonMain(void *parametros){
     return 0;
 }
 
-int getTimeServer(){
+long long unsigned getActualTime(){
 
-    return 0;
+    gettimeofday(&tv, NULL);
+
+    unsigned long long millisecondsSinceEpoch =
+    (unsigned long long)(tv.tv_sec) * 1000 +
+    (unsigned long long)(tv.tv_usec) / 1000;
+
+    //printf("%llu\n", millisecondsSinceEpoch);
+    
+    return millisecondsSinceEpoch;
+}
+
+int calculo_cristian(int tempo_server, int tempo_envio, int tempo_resposta){
+
+    int tc = 0;
+    tc = tempo_server + (tempo_envio + tempo_resposta)/2;
+
+    return tc;
 }
 
 void sync_client(int socketCliente){
@@ -71,6 +90,7 @@ void sync_client(int socketCliente){
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
     time_t horario_servidor;
     time_t horario_cliente;
+    time_t horario_cliente_envio, horario_cliente_recebido;
     struct stat *arquivo_cliente = malloc(sizeof(struct stat));
 
     send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
@@ -97,12 +117,20 @@ void sync_client(int socketCliente){
             horario_cliente = 0;
         }
         else{
-            horario_cliente = arquivo_cliente->st_mtime;
+            //horario_cliente = arquivo_cliente->st_mtime;
+            horario_cliente_envio = getActualTime();
+            printf("horario_cliente_envio: %ld\n", horario_cliente_envio);
         }
 
         printf("[DAEMON] Synchronizing file: %s \n", ch);
 
         bytesRecebidos = recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
+
+        horario_cliente_recebido = getActualTime();
+        printf("horario_cliente_recebido: %ld\n", horario_cliente_recebido);
+
+        horario_cliente = calculo_cristian(horario_servidor, horario_cliente_envio, horario_cliente_recebido);
+        printf("horario_cliente: %ld\n", horario_cliente);
 
         /*printf("Cliente: %zd \n", horario_cliente);
         printf("Servidor: %zd \n", horario_servidor);
@@ -142,6 +170,7 @@ void send_file_sync(int socket, char* arquivo){
     struct stat *time_modified = malloc(sizeof(struct stat));
     ssize_t enviado;
     time_t time_dummy;
+    int tempo_arquivo = 0;
 
     strcpy(buffer,arquivo);
 
@@ -218,7 +247,7 @@ void get_file_sync(int socket, char* arquivo){
                 if (lstat(arquivo, time_modified) != 0) {
                     printf("[ERROR] Error trying to get the time when changed");
                  }
-                else{
+                else{ // atualiza o tempo da ultima modificacao, atualizar para o calculo da formula de cristian
                     if (time_modified->st_mtime > ultimo_sync_parcial)
                         ultimo_sync_parcial = time_modified->st_mtime;
                 }
@@ -398,6 +427,8 @@ void close_connection(int socket){
 }
 
 int main(int argc, char *argv[]){
+
+    printf("tempo inicio programa %llu: ", getActualTime());
     
     int socketCliente;
     int opcao = 1;

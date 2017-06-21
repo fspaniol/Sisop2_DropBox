@@ -49,4 +49,6 @@ void send_time_modified(int socket, char* usuario); // Envia a data quando o arq
 
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
+long long unsigned getTimeServer();
+
 #endif /* dropboxServer_h */

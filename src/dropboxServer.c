@@ -18,7 +18,7 @@
 #include <unistd.h> 
 #include <arpa/inet.h> 
 #include <sys/stat.h> 
-
+#include <sys/time.h>
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
 
@@ -27,6 +27,9 @@
 struct Client clientes[10];
 int semaforo = 0;
 //Cria o socket do servidor
+
+struct timeval tv;
+// cria estrutura para pegar o tempo
 
 int criaSocketServidor(char *host, int port){
     int socketServidor;
@@ -40,7 +43,6 @@ int criaSocketServidor(char *host, int port){
     enderecoServidor = retornaEndereco(host,port);
     
     bind(socketServidor, (struct sockaddr *) &enderecoServidor, sizeof(enderecoServidor)); // Conecta o socket com o endereço do servidor
-    
     
     return socketServidor;
 }
@@ -64,6 +66,18 @@ int conta_conexoes_usuario(char *usuario){
     semaforo = 0;
 
     return cont;
+}
+
+
+long long unsigned getTimeServer(){
+
+    gettimeofday(&tv, NULL);
+
+    unsigned long long millisecondsSinceEpoch =
+    (unsigned long long)(tv.tv_sec) * 1000 +
+    (unsigned long long)(tv.tv_usec) / 1000;
+
+    return millisecondsSinceEpoch;
 }
 
 
@@ -266,9 +280,13 @@ void receive_file_sync(int socket, char* usuario){
             printf("[Server][User: %s] Successfully received client file.\n", usuario);
 
             lstat(diretorio,time_modified);
-            horario_modificado = time_modified->st_mtime;
+            //horario_modificado = time_modified->st_mtime;
+            horario_modificado = getTimeServer();
 
             bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+
+            printf("BYTES RECEBIDOS: %zd\n", bytesRecebidos);
+
             return;
         }
     }
@@ -402,6 +420,7 @@ int updateReplicas(){
 
 int main(int argc, char *argv[]){
     
+    printf("Timestamp that the server began: %llu\n", getTimeServer());
     int socketServidor;
     struct sockaddr_storage depositoServidor[10];
     socklen_t tamanhoEndereco[10];
