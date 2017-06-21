@@ -35,6 +35,9 @@ int semaforo = 0;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
 
+time_t horario_servidor;
+time_t horario_cliente;
+time_t horario_cliente_envio, horario_cliente_recebido;
 struct timeval tv;
 
 void *daemonMain(void *parametros){
@@ -88,9 +91,6 @@ void sync_client(int socketCliente){
     char clientFiles[TAM_MAX]; // buffer
     int x = 0;
     ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
-    time_t horario_servidor;
-    time_t horario_cliente;
-    time_t horario_cliente_envio, horario_cliente_recebido;
     struct stat *arquivo_cliente = malloc(sizeof(struct stat));
 
     send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
@@ -248,8 +248,10 @@ void get_file_sync(int socket, char* arquivo){
                     printf("[ERROR] Error trying to get the time when changed");
                  }
                 else{ // atualiza o tempo da ultima modificacao, atualizar para o calculo da formula de cristian
-                    if (time_modified->st_mtime > ultimo_sync_parcial)
-                        ultimo_sync_parcial = time_modified->st_mtime;
+                    if (horario_cliente > ultimo_sync_parcial)
+                        ultimo_sync_parcial = horario_cliente;
+                    /*if (time_modified->st_mtime > ultimo_sync_parcial)
+                        ultimo_sync_parcial = time_modified->st_mtime;*/
                 }
                 return;
             }
