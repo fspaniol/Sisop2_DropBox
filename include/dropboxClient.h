@@ -32,6 +32,8 @@ void send_file_sync(int socket, char* arquivo); // Envia arquivos quando sincron
 
 void get_file_sync(int socket, char* arquivo); // Recebe arquivos quando sincronizando
 
-int getTimeServer(); // Recebe o horário local do servidor
+void getTimeServer(); // Recebe o horário local do servidor
+
+void algoritmo_cristian(); // Calcula o horario do server com o algoritmo de cristian
 
 #endif /* dropboxClient_h */

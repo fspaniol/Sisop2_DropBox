@@ -110,7 +110,7 @@ void *atendeCliente(void *indice){
     send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
         
     while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
-        opcao_recebida = 7;
+        opcao_recebida = 8;
         //puts("Estou esperando acao de algum cliente... \n");
             
         recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
@@ -128,6 +128,8 @@ void *atendeCliente(void *indice){
             case 5: send_time_modified(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 6: receive_file_sync(clientes[index].devices[0], clientes[index].userid);
+                break;
+            case 7: send_time(clientes[index].devices[0], clientes[index].userid);
                 break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -320,6 +322,15 @@ void send_file_servidor(int socket, char* usuario){
     }
 
     fclose(handler);
+}
+
+void send_time(int socket, char* usuario){
+    time_t horario;
+
+    time(&horario);
+    send(socket,&horario,sizeof(horario),0);
+
+    printf("[SERVER][User: %s] Enviado o atual horario. \n", usuario);
 }
 
 

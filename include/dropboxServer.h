@@ -47,6 +47,8 @@ int conta_conexoes_usuario(char *usuario); // Conta as conexoes presentes para u
 
 void send_time_modified(int socket, char* usuario); // Envia a data quando o arquivo foi modificado
 
+void send_time(int socket, char* usuario); // Envia a hora local do server para o outro lado
+
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
 #endif /* dropboxServer_h */

@@ -33,6 +33,7 @@
 int semaforo = 0;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
+time_t diferenca;
 
 void *daemonMain(void *parametros){
 
@@ -47,6 +48,7 @@ void *daemonMain(void *parametros){
         }
         semaforo = 1;
         printf("[DAEMON] Synchronizing the folder \n");
+        getTimeServer(socketCliente);
         sync_client(socketCliente);
         printf("[DAEMON] Synchronization done \n");
         semaforo = 0;
@@ -57,10 +59,36 @@ void *daemonMain(void *parametros){
     return 0;
 }
 
-int getTimeServer(){
+void getTimeServer(int socketCliente){
+    time_t horario_envio;
+    time_t horario_recebimento;
+    time_t horario_servidor;
 
-    return 0;
+    int opcao = 7;
+    opcao = htonl(opcao);
+
+    time(&horario_envio);
+    send(socketCliente,&opcao,sizeof(opcao),0);
+    recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
+    time(&horario_recebimento);
+
+    algoritmo_cristian(horario_envio,horario_recebimento,horario_servidor);
+
+    /*printf("Horario de envio: %zd \n", horario_envio);
+    printf("Horario de recebimento: %zd \n", horario_recebimento);
+    printf("Horario de servidor: %zd \n", horario_servidor);*/
 }
+
+void algoritmo_cristian(time_t horario_envio, time_t horario_recebimento, time_t horario_servidor){
+    time_t tempo_processamento;
+
+    tempo_processamento = horario_recebimento - horario_envio;
+    tempo_processamento = tempo_processamento / 2;
+    tempo_processamento += horario_envio; // A hora que era no cliente quando o servidor estava pegando seu horario local
+
+    diferenca = horario_servidor - tempo_processamento; // Atualiza a diferenca entre os dois relogios
+}
+
 
 void sync_client(int socketCliente){
 
@@ -104,16 +132,18 @@ void sync_client(int socketCliente){
 
         bytesRecebidos = recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
 
-        /*printf("Cliente: %zd \n", horario_cliente);
+        printf("Cliente: %zd \n", horario_cliente);
         printf("Servidor: %zd \n", horario_servidor);
-        printf("ultimo_sync: %zd \n", ultimo_sync);*/
+        printf("ultimo_sync: %zd \n", ultimo_sync);
+        printf ( "Diferenca entre cliente e servidor: %zd \n", diferenca);
 
-        if (horario_cliente > horario_servidor && horario_cliente > ultimo_sync){
+
+        if ((horario_cliente + diferenca) > horario_servidor && horario_cliente > ultimo_sync){
             printf("[DAEMON] File: %s being sent to the server \n", ch);
             send_file_sync(socketCliente,ch);
         }
         else{
-            if(horario_servidor > horario_cliente && horario_servidor > ultimo_sync){
+            if(horario_servidor > (horario_cliente + diferenca) && horario_servidor > ultimo_sync){
                 printf("[DAEMON] File: %s being received from the server \n", ch);
                 get_file_sync(socketCliente,ch);
             }
