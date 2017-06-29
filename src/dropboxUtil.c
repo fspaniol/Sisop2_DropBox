@@ -24,7 +24,22 @@ struct sockaddr_in retornaEndereco(char *host, int port){
     return enderecoServidor;
 }
 
-void imprimir_menu(char *user){
+// Cria um arquivo para salvar os ips de replica-managers
+
+FILE* createRMFile() {
+    FILE *handler;
+
+    return handler;
+}
+
+char* readRMFile() {
+    FILE* handler;
+    char *rmList;
+
+    return rmList;
+}
+
+void imprimir_menu(char *user) {
 	printf("\n\n");
 	printf("[Server] Greetings, %s. What do you want to do?\n", user);
     puts("\t [1] to syncronize your directory.");
