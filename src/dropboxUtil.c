@@ -26,17 +26,41 @@ struct sockaddr_in retornaEndereco(char *host, int port){
 
 // Cria um arquivo para salvar os ips de replica-managers
 
-FILE* createRMFile() {
-    FILE *handler;
+int createRMFile(char iplist[]) {
+    FILE *handler = NULL;
+    handler = fopen("RMFile.txt", "w+");
 
-    return handler;
+    if (handler != NULL) {
+	    
+	    fprintf(handler, "%s", iplist);
+	    printf("[CLIENT] Successfully created a RM File.\n");
+	    fclose(handler);
+	    return 0;
+	} else {
+		printf("[CLIENT] Could not create the RM file.\n");
+		return 1;
+	} 
 }
 
 char* readRMFile() {
     FILE* handler;
-    char *rmList;
+    handler = fopen("RMFile.txt", "r+");
+   	char *rmList;
+   	int i = 0;
+   	char c;
 
-    return rmList;
+   	if (handler != NULL) {
+		while ((c = getc(handler)) != EOF) {
+			rmList = &c;
+			rmList++;
+		}
+    	// putchar(c);
+
+		fclose(handler);
+    	return rmList;
+   	} else {
+   		return NULL;
+   	}
 }
 
 void imprimir_menu(char *user) {
