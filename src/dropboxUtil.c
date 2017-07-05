@@ -45,19 +45,21 @@ int createRMFile(char iplist[]) {
 char* readRMFile() {
     FILE* handler;
     handler = fopen("RMFile.txt", "r+");
-   	char *rmList;
+   	char rmList[1024];
+	char *theList;
    	int i = 0;
    	char c;
 
    	if (handler != NULL) {
-		while ((c = getc(handler)) != EOF) {
-			rmList = &c;
-			rmList++;
+		while ((c = getc(handler)) != EOF) {			
+			rmList[i] = c;
+			i++;
+			putchar(c);
 		}
-    	// putchar(c);
 
 		fclose(handler);
-    	return rmList;
+		theList = rmList;
+    		return theList;
    	} else {
    		return NULL;
    	}

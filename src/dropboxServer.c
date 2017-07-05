@@ -6,7 +6,6 @@
 //
 //
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -25,6 +24,7 @@
 #define TAM_MAX 1024
 
 struct Client clientes[10];
+//struct Replica replicas[10];
 int semaforo = 0;
 //Cria o socket do servidor
 
@@ -392,9 +392,40 @@ void list_files_server(int socket, char* usuario) {
     printf("[SERVER][User: %s] Done! Client's directory successfully read and sent.\n", usuario);
 }
 
-int updateReplicas(){
+// Propaga alteracoes para as outras replicas.
+// Retorno:
+// 	0 se todas as replicas aceitaram as alteracoes normalmente
+// 	1 se alguma replica nao pode aceitar as alteracoes
+int updateReplicas(int funcao, struct Client cliente){
+	int numberOfReplicas = 10; //temporario
+	int i = 0;
+	int timeout = 500; //temporario
 
-    return 0;
+	for (i = 0; i < numberOfReplicas; i++) {
+		switch (funcao) {
+			case 1: //criaPastaUsuario
+				
+				if (timeout == 0)
+					return 1;
+				break;
+
+			case 2: //sendFile (cliente -> server -> replicas)
+				if (timeout == 0)
+					return 1;
+				break;
+
+			case 3: //sync
+				if (timeout == 0)
+					return 1;
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	//tudo certo ate aqui!
+    	return 0;
 }
 
 
