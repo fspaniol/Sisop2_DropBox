@@ -509,6 +509,8 @@ int main(int argc, char *argv[]){
     	FILE *handler;
     	char *buffer;
     	char *masterIP;
+    	int foundPrimary = 0;
+    	int index = 1;
 		printf("[Server] Will look for IP list... \n");
 		handler = fopen("RMFile.txt", "r");
 
@@ -517,15 +519,30 @@ int main(int argc, char *argv[]){
 			buffer = readRMFile();
 			printf("%s\n", buffer);
 
-			// printf("-nil spc-\n");
-			masterIP = getAddressByIndex(1);
+			do {
+				masterIP = getAddressByIndex(index);
+				if ((masterIP == NULL) || (strlen(masterIP) < 7)) {
+					printf("[Server] Could not find any active primary.\n");
+					printf("[Server] Terminating...\n");
+					return 0;
+				}
+
+				printf("[Server] Will try to connect to %s at 53001 . . .\n", masterIP);
+				if (checkPrimary(masterIP, argv[1])) {
+					foundPrimary = 1;
+					printf("Found primary server!\n");
+				}
+
+				masterIP = NULL;
+				index++;
+			} while (!foundPrimary);			
+
 			printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
 
 		} else {
 			printf("[Server] Could not find a RMFile. Aborting... \n");
 			return 0;
 		}
-
 
     }
 
