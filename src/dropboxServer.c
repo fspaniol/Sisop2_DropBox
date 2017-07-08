@@ -448,7 +448,7 @@ void *listenForReplicas() {
         replicas[cont].binded = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
 
 	    send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
-	    printf("[Listnr] Replica %d connected to the primary server.\n", cont);
+	    printf("[Listnr] Replica %d connected to the primary server. (isP: %d)\n", cont, isPrimaryServer);
 		cont++;
 	}
 	return 0;
