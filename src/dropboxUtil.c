@@ -21,6 +21,11 @@
 #define	_SYS_ERRNO_H_
 #endif
 
+#if defined(__linux)
+#include <errno.h>
+#endif
+
+#if defined(__apple)
 #if !defined(KERNEL) && !defined(KERNEL_PRIVATE)
 #include <sys/cdefs.h>
 __BEGIN_DECLS
@@ -28,6 +33,8 @@ extern int * __error __P((void));
 #define errno (*__error())
 __END_DECLS
 #endif
+#endif
+
 
 // Cria o endereco do servidor
 
@@ -198,23 +205,24 @@ int connectTo(char *host, int port) {
 	  fcntl(soc, F_SETFL, arg); 
 	  // I hope that is all 
 	  printf("[Server] Connection successful!\n");
-	  return res;
+	  return 1;
 }
 
 int checkPrimary(char primaryIP[], char myIP[]) {
 
 	int replicaSocket;
-	int isConnected = 0;
+	int isConnected = -1;
 	char *ip = malloc(16);
 	strcpy(ip, myIP);
 
 	replicaSocket = connectTo(primaryIP, 53001);
-	if (replicaSocket == -1)
+	if (replicaSocket == -1){
+		printf("replicaSocket returned -1\n");
 		return 0;
+	}
 	
 	send(replicaSocket, ip, sizeof(ip),0); // Envia o ip da replica para o servidor primario
-    recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
-
+    	recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
 	return isConnected;
 }
 
