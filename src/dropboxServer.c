@@ -28,6 +28,7 @@ struct Client clientes[10];
 int semaforo = 0;
 int isPrimaryServer = 0;
 char primaryIP[16];
+char serversIPs[16][16];
 //Cria o socket do servidor
 
 int criaSocketServidor(char *host, int port){
@@ -516,8 +517,8 @@ int main(int argc, char *argv[]){
 			buffer = readRMFile();
 			printf("%s\n", buffer);
 
-			printf("-nil spc-\n");
-			masterIP = strtok(buffer, "\n");
+			// printf("-nil spc-\n");
+			masterIP = getAddressByIndex(1);
 			printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
 
 		} else {

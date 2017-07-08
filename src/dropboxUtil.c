@@ -65,6 +65,38 @@ char* readRMFile() {
    	}
 }
 
+// Retorna o IP da (index) linha do RMFile
+char* getAddressByIndex(int index) {
+
+	FILE* handler;
+    handler = fopen("RMFile.txt", "r+");
+	char *indexIP = malloc(16);
+	int i = 1;
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    if (handler == NULL)
+    	return NULL;
+
+    while ((read = getline(&line, &len, handler)) != -1) {
+    	// printf("Retrieved line of length %zu :\n", read);
+        // printf("%s", line);
+        if (i == index)
+        	strcpy(indexIP, line);
+        i++;
+    }
+
+    fclose(handler);
+    if (line != NULL)
+        free(line);
+
+    indexIP[strlen(indexIP)-1] = '\0';
+
+    return indexIP;
+}
+
 void imprimir_menu(char *user) {
 	printf("\n\n");
 	printf("[Server] Greetings, %s. What do you want to do?\n", user);
