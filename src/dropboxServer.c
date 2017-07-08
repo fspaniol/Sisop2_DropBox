@@ -26,6 +26,8 @@
 struct Client clientes[10];
 //struct Replica replicas[10];
 int semaforo = 0;
+int isPrimaryServer = 0;
+char primaryIP[16];
 //Cria o socket do servidor
 
 int criaSocketServidor(char *host, int port){
@@ -451,7 +453,81 @@ int main(int argc, char *argv[]){
         socketServidor = criaSocketServidor(argv[1],53000);
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
     }
-    
+
+    // Definindo o server como primary server [1] ou replica manager [0]
+    int opt;
+
+    if (argc >= 3) {
+    	opt = atoi(&argv[2][0]);
+
+    	if (opt == 1) {
+    		isPrimaryServer = 1;
+    		printf("[Server] Defined this server as primary server.\n");
+    	}
+    	if (opt == 0) {
+    		isPrimaryServer = 0;
+    		printf("[Server] Defined this server as replica manager.\n");
+    	} 
+    	if ((opt != 1) && (opt != 0)) {
+    		printf("[Server] Unknow replica definition: %d\n", opt);
+    		printf("[Server] Aborting...\n");
+    		return 0;
+    	}
+    }
+
+    if (isPrimaryServer == 1) {
+    	
+    	FILE *handler;
+    	char *buffer;
+    	char iplist[1024];
+    	strcpy(iplist, argv[1]);
+    	strcat(iplist, "\n");
+
+    	printf("[Server] Will look for IP list... \n");
+    	handler = fopen("RMFile.txt","r");
+
+    	if (handler != NULL) {
+    		printf("[Server] Found RMFile. Will read: \n");
+    		buffer = readRMFile();
+    		printf("%s\n", buffer);
+
+    	} else {
+    		printf("[Server] Could not find RMFile. Creating a new one... \n");
+    		if (createRMFile(iplist) == 0) {
+    			printf("[Server] Successfully created a RMFile.\n");
+    		} else {
+    			printf("[Server] Could not create a RMFile.\n");
+    		}
+    	}
+
+    	fclose(handler);
+    }
+
+    if (isPrimaryServer == 0) {
+
+    	FILE *handler;
+    	char *buffer;
+    	char *masterIP;
+		printf("[Server] Will look for IP list... \n");
+		handler = fopen("RMFile.txt", "r");
+
+		if (handler != NULL) {
+			printf("[Server] Found RMFile. Reading...\n");
+			buffer = readRMFile();
+			printf("%s\n", buffer);
+
+			printf("-nil spc-\n");
+			masterIP = strtok(buffer, "\n");
+			printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
+
+		} else {
+			printf("[Server] Could not find a RMFile. Aborting... \n");
+			return 0;
+		}
+
+
+    }
+
 
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter

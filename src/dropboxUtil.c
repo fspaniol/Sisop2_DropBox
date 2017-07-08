@@ -33,11 +33,11 @@ int createRMFile(char iplist[]) {
     if (handler != NULL) {
 	    
 	    fprintf(handler, "%s", iplist);
-	    printf("[CLIENT] Successfully created a RM File.\n");
+	    // printf("[CLIENT] Successfully created a RM File.\n");
 	    fclose(handler);
 	    return 0;
 	} else {
-		printf("[CLIENT] Could not create the RM file.\n");
+		// printf("[CLIENT] Could not create the RM file.\n");
 		return 1;
 	} 
 }
@@ -54,7 +54,7 @@ char* readRMFile() {
 		while ((c = getc(handler)) != EOF) {			
 			rmList[i] = c;
 			i++;
-			putchar(c);
+			// putchar(c);
 		}
 
 		fclose(handler);
