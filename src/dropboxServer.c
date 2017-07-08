@@ -566,10 +566,8 @@ int main(int argc, char *argv[]){
 				printf("[Server] Will try to connect to %s at 53001 . . .\n", masterIP);
 				if (checkPrimary(masterIP, argv[1])) {
 					foundPrimary = 1;
-					printf("Found primary server!\n");
 				}
 
-				masterIP = NULL;
 				index++;
 			} while (!foundPrimary);			
 
