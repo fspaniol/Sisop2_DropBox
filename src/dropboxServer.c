@@ -24,7 +24,7 @@
 #define TAM_MAX 1024
 
 struct Client clientes[10];
-//struct Replica replicas[10];
+struct Replica replicas[10];
 int semaforo = 0;
 int isPrimaryServer = 0;
 char primaryIP[16];
@@ -431,6 +431,29 @@ int updateReplicas(int funcao, struct Client cliente){
     	return 0;
 }
 
+void *listenForReplicas() {
+	int socketListener, cont = 0;
+	struct sockaddr_storage depositoServidor[10];
+    socklen_t tamanhoEndereco[10];
+	printf("[Listnr] Listener initialized. Server is now listening for incoming replica connections...\n");
+	socketListener = criaSocketServidor(primaryIP, 53001);
+	
+	while (1) {
+		
+		if ((listen(socketListener,10)) != 0){
+	            printf("[ERROR] Listener is deaf. Something went wrong.\n");
+	    }
+
+	    tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
+        replicas[cont].binded = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+
+	    send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
+	    printf("[Listnr] Replica %d connected to the primary server.\n", cont);
+		cont++;
+	}
+	return 0;
+}
+
 
 // Setando a conexão TCP com o cliente
 
@@ -440,9 +463,9 @@ int main(int argc, char *argv[]){
     struct sockaddr_storage depositoServidor[10];
     socklen_t tamanhoEndereco[10];
     pthread_t threads[10];
-    pthread_t daemon;
+    pthread_t daemon, primaryListener;
     int cont = 0;
-    int cont2;
+    int cont2, opt;
 
     for (int x = 0; x < 10; x++)
         clientes[x].logged_in = 0;
@@ -450,13 +473,13 @@ int main(int argc, char *argv[]){
     if (argc < 2) {
         printf("[Server] No server ip inserted. Hosting at default 127.0.0.1 : 53000.\n");
         socketServidor = criaSocketServidor("127.0.0.1", 53000);
+        strcpy(primaryIP, "127.0.0.1");
     } else {
         socketServidor = criaSocketServidor(argv[1],53000);
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
     }
 
     // Definindo o server como primary server [1] ou replica manager [0]
-    int opt;
 
     if (argc >= 3) {
     	opt = atoi(&argv[2][0]);
@@ -478,11 +501,14 @@ int main(int argc, char *argv[]){
 
     if (isPrimaryServer == 1) {
     	
+    	// Primary tem que verificar se existe um RMFile.txt e, caso não exista, criar um
+
     	FILE *handler;
     	char *buffer;
     	char iplist[1024];
     	strcpy(iplist, argv[1]);
     	strcat(iplist, "\n");
+    	strcpy(primaryIP, argv[1]);
 
     	printf("[Server] Will look for IP list... \n");
     	handler = fopen("RMFile.txt","r");
@@ -502,9 +528,19 @@ int main(int argc, char *argv[]){
     	}
 
     	fclose(handler);
+
+    	// Cria uma segunda thread que roda em paralelo e se comunica com os replica-managers
+    	if (pthread_create(&primaryListener, NULL, listenForReplicas, 0)){
+        	puts("[ERROR] Could not create replica listener thread.");
+        	puts("[Server] Terminating...");
+        	return 0;
+    	}
+
     }
 
     if (isPrimaryServer == 0) {
+
+    	// Replica Manager deve ver se há um RMFile e buscar pelo servidor primário
 
     	FILE *handler;
     	char *buffer;

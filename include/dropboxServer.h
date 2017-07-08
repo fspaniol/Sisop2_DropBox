@@ -27,6 +27,12 @@ struct Client{
     int logged_in;                  // Cliente está logado ou não
 };
 
+struct Replica{
+	int binded;						// Pra dizer se a replica está ok
+	char ip[16];					// IP da replica
+	int pid;						// PID da replica (caso a gente faça um algoritmo de eleição de líder)
+};
+
 int criaSocketServidor(char *host, int port); // Cria o socket do servidor
 
 void sync_server();                 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
