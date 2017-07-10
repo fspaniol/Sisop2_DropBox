@@ -26,7 +26,7 @@
 struct Client clientes[10];
 struct Replica replicas[10];
 int semaforo = 0;
-int isPrimaryServer = 0;
+int isPrimaryServer = -1;
 char primaryIP[16];
 char serversIPs[16][16];
 //Cria o socket do servidor
@@ -499,6 +499,10 @@ int main(int argc, char *argv[]){
     	}
     }
 
+    if (isPrimaryServer == -1) {
+    	printf("[Server] Opened a standalone server. No replicas will be linked.\n");
+    }
+
     if (isPrimaryServer == 1) {
     	
     	// Primary tem que verificar se existe um RMFile.txt e, caso não exista, criar um
@@ -579,7 +583,6 @@ int main(int argc, char *argv[]){
 		}
 
     }
-
 
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter

@@ -25,7 +25,7 @@
 #include <errno.h>
 #endif
 
-#if defined(__apple)
+#if defined(__APPLE__)
 #if !defined(KERNEL) && !defined(KERNEL_PRIVATE)
 #include <sys/cdefs.h>
 __BEGIN_DECLS
