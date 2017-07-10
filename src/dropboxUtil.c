@@ -122,35 +122,9 @@ char* getAddressByIndex(int index) {
     return indexIP;
 }
 
-// int connectTo(char *host, int port) {
-//     //Primeiro parametro indica qual o dominio da internet, nesse caso IPV4
-//     //Segundo parametro indica que estaremos usando TCP, ao inves de UDP
-//     //Terceiro parametro fala pro SO usar o protocolo padrão
-//     int response;
-//     struct timeval tmvl;
-
-//     int skt = socket(PF_INET, SOCK_STREAM, 0); // Cria o socket do cliente
-//     if (skt < 0) {
-//     	printf("[Server] Error creating socket.\n");
-//     	return 0;
-//     }
-
-//     socklen_t tamanho_endereco;
-    
-//     //Setando as configurações básicas para se conectar ao servidor
-//     struct sockaddr_in endereco;
-//     endereco = retornaEndereco(host, port);
-    
-//     tamanho_endereco = sizeof endereco;
-    
-//     response = connect(skt, (struct sockaddr *) &endereco, tamanho_endereco); // Conecta de fato agora o socket do cliente com o endereço do servidor
-
-//     if (response < 0) {
-
-//     }
-    
-//     return skt; // Retorna o socket a ser usado
-// }
+int pingServer(char *host, int port){
+	return 1;
+}
 
 int connectTo(char *host, int port) {
 	int res, valopt; 
