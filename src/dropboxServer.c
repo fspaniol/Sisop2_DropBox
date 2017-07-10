@@ -430,6 +430,9 @@ int updateReplicas(int funcao, struct Client cliente){
 void *listenForReplicas() {
 	int socketListener, cont = 0;
 	struct sockaddr_storage depositoServidor[10];
+	char recvdIP[TAM_MAX];
+	bzero(recvdIP, TAM_MAX);
+	ssize_t bytesRecebidos = 0;
     socklen_t tamanhoEndereco[10];
 	printf("[Listnr] Listener initialized. Server is now listening for incoming replica connections...\n");
 	socketListener = criaSocketServidor(primaryIP, 53001);
@@ -444,7 +447,32 @@ void *listenForReplicas() {
         replicas[cont].binded = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
 
 	    send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
-	    printf("[Listnr] Replica %d connected to the primary server. (isP: %d)\n", cont, isPrimaryServer);
+	    
+	    // akisjda
+
+	    while ((bytesRecebidos = recv(socketListener, recvdIP, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+	    	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+	       		printf("[ERROR ] Error when receiving replica IP.\n");
+	            break;
+	    	}
+	        if (recvdIP[0] == '\0'){
+	            printf("[Listnr] Replica could not receive IP.\n");
+	            break; 
+	        }
+
+	        bzero(recvdIP, TAM_MAX); // Reseta o buffer
+
+	    	if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+	            printf("[Listnr] Successfully received replica IP.\n");
+	    		break;
+	    	} else {
+	    		printf("[Listnr] Could not receive replica IP.\n");
+	    	}
+    	}
+    	char *buf = malloc(16);
+    	strcpy(buf, recvdIP);
+
+		printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
 		cont++;
 	}
 	return 0;
@@ -534,7 +562,7 @@ void primaryLoop(int socketServidor) {
 
 // REPLICA SERVER FUNCTIONS //
 
-void initializeReplica(int argc, char *argv[]) {
+int initializeReplica(int argc, char *argv[]) {
 	// Replica Manager deve ver se há um RMFile e buscar pelo servidor primário
 	FILE *handler;
 	char *buffer;
@@ -554,11 +582,11 @@ void initializeReplica(int argc, char *argv[]) {
 			if ((masterIP == NULL) || (strlen(masterIP) < 7)) {
 				printf("[Server] Could not find any active primary.\n");
 				printf("[Server] Terminating...\n");
-				return;
+				return foundPrimary;
 			}
 
 			printf("[Server] Will try to connect to %s at 53001 . . .\n", masterIP);
-			if (checkPrimary(masterIP, argv[1])) {
+			if (checkPrimary(masterIP, argv[1]) != -2) {
 				foundPrimary = 1;
 			}
 
@@ -566,10 +594,11 @@ void initializeReplica(int argc, char *argv[]) {
 		} while (!foundPrimary);			
 
 		printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
+		return foundPrimary;
 
 	} else {
 		printf("[Server] Could not find a RMFile. Aborting... \n");
-		return;
+		return foundPrimary;
 	}
 }
 
@@ -585,7 +614,7 @@ void replicaLoop(int socketServidor) {
 	printf("[Server] Replica is waiting for Primary...\n");
     
     while (1){
-    	if (pingServer(primaryIP, 53001) == 0)
+    	if (pingServer(primaryIP, socketServidor) == 0)
     		break;
     }
 }
@@ -641,8 +670,8 @@ int main(int argc, char *argv[]){
     }
 
     if (isPrimaryServer == 0) {
-    	initializeReplica(argc, argv);
-    	replicaLoop(socketServidor);
+    	if (initializeReplica(argc, argv) == 1)
+    		replicaLoop(socketServidor);
     }
     
     return 0;

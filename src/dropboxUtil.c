@@ -67,6 +67,17 @@ int createRMFile(char iplist[]) {
 	} 
 }
 
+int addAddressRMFile(char host[]) {
+	FILE *handler = NULL;
+	handler = fopen("RMFile.txt", "a");
+	if (handler != NULL) {
+		fprintf(handler, "%s\n", host);
+		return 0;
+	} else {
+		return 1;
+	}
+}
+
 char* readRMFile() {
     FILE* handler;
     handler = fopen("RMFile.txt", "r+");
@@ -122,7 +133,13 @@ char* getAddressByIndex(int index) {
     return indexIP;
 }
 
-int pingServer(char *host, int port){
+int pingServer(char *host, int serverSocket){
+
+	struct timeval tv;
+	tv.tv_sec = 5;  /* 5 Secs Timeout */
+	tv.tv_usec = 0;  // Not init'ing this can cause strange errors
+	// setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv,sizeof(struct timeval));
+
 	return 1;
 }
 
@@ -188,15 +205,23 @@ int checkPrimary(char primaryIP[], char myIP[]) {
 	int isConnected = -1;
 	char *ip = malloc(16);
 	strcpy(ip, myIP);
+	int bytesEnviados = 0;
 
 	replicaSocket = connectTo(primaryIP, 53001);
 	if (replicaSocket == -1){
 		printf("replicaSocket returned -1\n");
-		return 0;
+		return -2;
 	}
 	
-	send(replicaSocket, ip, sizeof(ip),0); // Envia o ip da replica para o servidor primario
-    	recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
+	send(replicaSocket, ip, strlen(ip), 0); // handshake
+    recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
+
+    if (isConnected == -1) {
+    	printf("sent.\n");
+    	if (send(replicaSocket, ip, strlen(ip), 0))
+    		printf("sent 2.\n");
+    }
+
 	return isConnected;
 }
 
