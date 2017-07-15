@@ -67,11 +67,46 @@ int createRMFile(char iplist[]) {
 	} 
 }
 
+int isAddressInFile(char host[]) {
+	FILE *handler = NULL;
+	handler = fopen("RMFile.txt", "r");
+	char *newIP = malloc(16);
+	strcpy(newIP, host);
+	char fileread[1024];
+	char *read = NULL;
+	char c;
+	int i = 0;
+
+	if (handler != NULL) {
+		while ((c = getc(handler)) != EOF) {			
+			fileread[i] = c;
+			i++;
+		}
+		read = fileread;
+
+		if(strstr(read, newIP) != NULL) {
+			// Achou o IP desejado dentro da file
+			fclose(handler);
+			return 0;
+		} else {
+			// Não achou o IP desejado
+			fclose(handler);
+			return 1;
+		}
+	} else {
+		// Não conseguiu abrir o arquivo
+		fclose(handler);
+		return -1;
+	}
+}
+
 int addAddressRMFile(char host[]) {
 	FILE *handler = NULL;
 	handler = fopen("RMFile.txt", "a");
+	char *newIP = host;
 	if (handler != NULL) {
-		fprintf(handler, "%s\n", host);
+		fprintf(handler, "%s\n", newIP);
+		fclose(handler);
 		return 0;
 	} else {
 		return 1;

@@ -142,7 +142,6 @@ void *atendeCliente(void *indice){
 
 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 void sync_server() {
-
 }
 
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
@@ -447,32 +446,21 @@ void *listenForReplicas() {
         replicas[cont].binded = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
 
 	    send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
-	    
-	    // akisjda
 
-	    while ((bytesRecebidos = recv(socketListener, recvdIP, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
-	    	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
-	       		printf("[ERROR ] Error when receiving replica IP.\n");
-	            break;
-	    	}
+	    bytesRecebidos = recv(socketListener, recvdIP, sizeof(recvdIP), 0);
+
+	    if (bytesRecebidos) {
+
 	        if (recvdIP[0] == '\0'){
-	            printf("[Listnr] Replica could not receive IP.\n");
-	            break; 
+	            printf("[Listnr] Could not receive Replica IP: %s\n", recvdIP);
+	            return 0; 
 	        }
 
-	        bzero(recvdIP, TAM_MAX); // Reseta o buffer
+	    	char *buf = malloc(16);
+	    	strcpy(buf, recvdIP);
 
-	    	if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
-	            printf("[Listnr] Successfully received replica IP.\n");
-	    		break;
-	    	} else {
-	    		printf("[Listnr] Could not receive replica IP.\n");
-	    	}
+			printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
     	}
-    	char *buf = malloc(16);
-    	strcpy(buf, recvdIP);
-
-		printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
 		cont++;
 	}
 	return 0;
@@ -489,6 +477,7 @@ void initializePrimary(int argc, char *argv[]) {
 	strcpy(iplist, argv[1]);
 	strcat(iplist, "\n");
 	strcpy(primaryIP, argv[1]);
+	int status = 0;
 
 	printf("[Server] Will look for IP list... \n");
 	handler = fopen("RMFile.txt","r");
@@ -497,6 +486,20 @@ void initializePrimary(int argc, char *argv[]) {
 		printf("[Server] Found RMFile. Will read: \n");
 		buffer = readRMFile();
 		printf("%s\n", buffer);
+		
+		status = isAddressInFile(primaryIP);
+		if (status == 0) {
+			printf("[Server] Found Primary IP in file. All good.\n");
+		}
+		
+		if (status == 1) {
+			printf("[Server] Primary IP not found in file. Writing... ");
+			if (addAddressRMFile(primaryIP) == 0) {
+				printf("Done.\n");
+			} else {
+				printf("Error.\n");
+			}
+		}
 
 	} else {
 		printf("[Server] Could not find RMFile. Creating a new one... \n");
