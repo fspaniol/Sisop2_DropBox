@@ -51,4 +51,6 @@ void send_time(int socket, char* usuario); // Envia a hora local do server para 
 
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
+void initializeSSL(); // Inicializa e inclui as bibliotecas do SSL
+
 #endif /* dropboxServer_h */

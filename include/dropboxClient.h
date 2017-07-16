@@ -36,4 +36,6 @@ void getTimeServer(); // Recebe o horário local do servidor
 
 void algoritmo_cristian(); // Calcula o horario do server com o algoritmo de cristian
 
+void initializeSSL(); // Inicializa e inclui as bibliotecas do SSL
+
 #endif /* dropboxClient_h */

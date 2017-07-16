@@ -23,6 +23,10 @@
 #include "../include/dropboxClient.h"
 #include "dropboxUtil.c"
 #include <sys/stat.h>
+#include "openssl/bio.h"
+#include "openssl/ssl.h"
+#include "openssl/err.h"
+#include <openssl/ssl.h>
 
 #define TAM_MAX 1024
 
@@ -34,6 +38,9 @@ int semaforo = 0;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
 time_t diferenca;
+SSL_METHOD *method;
+SSL_CTX *ctx;
+SSL *ssl;
 
 void *daemonMain(void *parametros){
 
@@ -132,10 +139,10 @@ void sync_client(int socketCliente){
 
         bytesRecebidos = recv(socketCliente,&horario_servidor,sizeof(horario_servidor),0);
 
-        printf("Cliente: %zd \n", horario_cliente);
+/*        printf("Cliente: %zd \n", horario_cliente);
         printf("Servidor: %zd \n", horario_servidor);
         printf("ultimo_sync: %zd \n", ultimo_sync);
-        printf ( "Diferenca entre cliente e servidor: %zd \n", diferenca);
+        printf ( "Diferenca entre cliente e servidor: %zd \n", diferenca);*/
 
 
         if ((horario_cliente + diferenca) > horario_servidor && horario_cliente > ultimo_sync){
@@ -427,6 +434,12 @@ void close_connection(int socket){
     
 }
 
+void initializeSSL(){
+    SSL_load_error_strings();
+    SSL_library_init();
+    OpenSSL_add_all_algorithms();
+}
+
 int main(int argc, char *argv[]){
     
     int socketCliente;
@@ -438,9 +451,38 @@ int main(int argc, char *argv[]){
     if (argc < 3) {
         printf("[Client] Please, insert your login and the desired IP to connect...\n");
         exit(0);
+    }
+
+    initializeSSL();
+    method = SSLv23_client_method();
+    ctx = SSL_CTX_new(method);
+    if (ctx == NULL){
+        ERR_print_errors_fp(stderr);
+        abort();
     } 
 
     socketCliente = connect_server(argv[2],53000);
+
+	sleep(1);
+
+
+    ssl = SSL_new(ctx);
+    SSL_set_fd(ssl,socketCliente);
+    if(SSL_connect(ssl) == -1)
+        ERR_print_errors_fp(stderr);
+    else{
+        X509 *cert;
+        char *line;
+        cert = SSL_get_peer_certificate(ssl);
+	if(cert != NULL){
+	     line = X509_NAME_oneline(X509_get_subject_name(cert),0,0);
+	     printf("The subject of the certificate is: %s \n",line);
+	     free(line);
+	     line = X509_NAME_oneline(X509_get_issuer_name(cert),0,0);
+	     printf("The issuer of the certificate is: %s \n",line);
+	     free(line);
+	}
+    }
 
 
     send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
