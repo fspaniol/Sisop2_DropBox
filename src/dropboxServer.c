@@ -131,6 +131,8 @@ void *atendeCliente(void *indice){
                 break;
             case 6: receive_file_sync(clientes[index].devices[0], clientes[index].userid);
                 break;
+            case 7: send_ServerList(clientes[index].devices[0], clientes[index].userid);
+            	break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
     }
@@ -321,6 +323,35 @@ void send_file_servidor(int socket, char* usuario){
     fclose(handler);
 }
 
+void send_ServerList(int socket, char* usuario) {
+
+    printf("[Server][User: %s] Server will send the server list... \n", usuario);
+
+    char buffer[TAM_MAX];
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+    ssize_t bytesLidos;
+    ssize_t bytesEnviados;
+    FILE* handler;
+
+    bzero(buffer,TAM_MAX);
+
+    if ((handler = fopen("RMFile.txt", "r")) == NULL) {
+        printf("[ERROR ][User: %s] Error retrieving the server list. \n", usuario);
+        return;
+    }
+
+    while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
+        if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+            printf("[ERROR ][User: %s] Error sending the server list.", usuario);
+            return;
+        }
+        bzero(buffer, TAM_MAX); // Reseta o buffer
+    }
+
+    fclose(handler);
+    printf("[Server][User: %s] Successfully sent the server list.\n", usuario);
+}
+
 
 void send_time_modified(int socket, char* usuario){
     char buffer[TAM_MAX];
@@ -429,12 +460,13 @@ int updateReplicas(int funcao, struct Client cliente){
 void *listenForReplicas() {
 	int socketListener, cont = 0;
 	struct sockaddr_storage depositoServidor[10];
-	char recvdIP[TAM_MAX];
-	bzero(recvdIP, TAM_MAX);
+	char recvbuffer[6000];
+	// bzero(recvbuffer, 6000);
 	ssize_t bytesRecebidos = 0;
+	int connected = 0;
     socklen_t tamanhoEndereco[10];
-	printf("[Listnr] Listener initialized. Server is now listening for incoming replica connections...\n");
 	socketListener = criaSocketServidor(primaryIP, 53001);
+	printf("[Listnr] Listener initialized. Server is now listening for incoming replica connections...\n");
 	
 	while (1) {
 		
@@ -444,23 +476,27 @@ void *listenForReplicas() {
 
 	    tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
         replicas[cont].binded = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        // printf("[Listnr] Connection incoming: %s\n", );
 
 	    send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
+	    printf("sent %d to socket.\n", isPrimaryServer);
 
-	    bytesRecebidos = recv(socketListener, recvdIP, sizeof(recvdIP), 0);
+	    if (recv(socketListener, recvbuffer, 6000, 0) < 0) {
+	    	printf("[Listnr] Receive failed. (%s)\n", recvbuffer);
+	    	printf("error: %zd\n", recv(socketListener, recvbuffer, 6000, 0));
+	    	return 0;
+	    }
 
-	    if (bytesRecebidos) {
+        if (recvbuffer[0] == '\0'){
+            printf("[Listnr] Could not receive Replica IP: %s\n", recvbuffer);
+            return 0; 
+        }
 
-	        if (recvdIP[0] == '\0'){
-	            printf("[Listnr] Could not receive Replica IP: %s\n", recvdIP);
-	            return 0; 
-	        }
+    	char *buf = malloc(16);
+    	strcpy(buf, recvbuffer);
 
-	    	char *buf = malloc(16);
-	    	strcpy(buf, recvdIP);
+		printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
 
-			printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
-    	}
 		cont++;
 	}
 	return 0;
@@ -468,7 +504,7 @@ void *listenForReplicas() {
 
 // PRIMARY SERVER FUNCTIONS //
 
-void initializePrimary(int argc, char *argv[]) {
+void initializePrimary(int argc, char *argv[], int sckt) {
 	// Primary tem que verificar se existe um RMFile.txt e, caso não exista, criar um
 	pthread_t primaryListener;
 	FILE *handler;
@@ -518,6 +554,7 @@ void initializePrimary(int argc, char *argv[]) {
     	puts("[Server] Terminating...");
     	return;
 	}
+	primaryLoop(sckt);
 }
 
 void primaryLoop(int socketServidor) {
@@ -565,11 +602,12 @@ void primaryLoop(int socketServidor) {
 
 // REPLICA SERVER FUNCTIONS //
 
-int initializeReplica(int argc, char *argv[]) {
+void initializeReplica(int argc, char *argv[], int sckt) {
 	// Replica Manager deve ver se há um RMFile e buscar pelo servidor primário
 	FILE *handler;
 	char *buffer;
 	char *masterIP;
+	int replicaSocket;
 	int foundPrimary = 0;
 	int index = 1;
 	printf("[Server] Will look for IP list... \n");
@@ -585,11 +623,14 @@ int initializeReplica(int argc, char *argv[]) {
 			if ((masterIP == NULL) || (strlen(masterIP) < 7)) {
 				printf("[Server] Could not find any active primary.\n");
 				printf("[Server] Terminating...\n");
-				return foundPrimary;
+				return;
 			}
 
 			printf("[Server] Will try to connect to %s at 53001 . . .\n", masterIP);
-			if (checkPrimary(masterIP, argv[1]) != -2) {
+			// replicaSocket = criaSocketServidor(argv[1], 53001);
+			replicaSocket = connectTo(masterIP, 53001, argv[1]);
+
+			if (replicaSocket != -1) {
 				foundPrimary = 1;
 			}
 
@@ -597,11 +638,12 @@ int initializeReplica(int argc, char *argv[]) {
 		} while (!foundPrimary);			
 
 		printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
-		return foundPrimary;
+		replicaLoop(replicaSocket);
+		return;
 
 	} else {
 		printf("[Server] Could not find a RMFile. Aborting... \n");
-		return foundPrimary;
+		return;
 	}
 }
 
@@ -613,8 +655,14 @@ void replicaLoop(int socketServidor) {
     pthread_t threads[10];
 	int cont = 0;
     int cont2;
-
-	printf("[Server] Replica is waiting for Primary...\n");
+	
+	// if( send(socketServidor, primaryIP, sizeof(16), 0) < 0)
+ //    {
+ //        printf("Send failed... (%s)", primaryIP);
+ //        return;
+ //    }
+ //    printf("IP (%s) Sent...\n", primaryIP);
+    printf("[Server] Replica is waiting for Primary...\n");
     
     while (1){
     	if (pingServer(primaryIP, socketServidor) == 0)
@@ -640,6 +688,7 @@ int main(int argc, char *argv[]){
     } else {
         socketServidor = criaSocketServidor(argv[1],53000);
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
+        strcpy(primaryIP, argv[1]);
     }
 
     // Definindo o server como primary server [1] ou replica manager [0]
@@ -668,13 +717,11 @@ int main(int argc, char *argv[]){
     }
 
     if (isPrimaryServer == 1) {
-    	initializePrimary(argc, argv);
-    	primaryLoop(socketServidor);
+    	initializePrimary(argc, argv, socketServidor);
     }
 
     if (isPrimaryServer == 0) {
-    	if (initializeReplica(argc, argv) == 1)
-    		replicaLoop(socketServidor);
+    	initializeReplica(argc, argv, socketServidor);
     }
     
     return 0;

@@ -178,7 +178,7 @@ int pingServer(char *host, int serverSocket){
 	return 1;
 }
 
-int connectTo(char *host, int port) {
+int connectTo(char *host, int port, char value[]) {
 	int res, valopt; 
 	  struct sockaddr_in addr; 
 	  long arg; 
@@ -199,7 +199,7 @@ int connectTo(char *host, int port) {
 	  addr.sin_port = htons(2000); 
 	  addr.sin_addr.s_addr = inet_addr(host); 
 	  addr.sin_port = htons(port);
-	  res = connect(soc, (struct sockaddr *)&addr, sizeof(addr)); 
+	  res = connect(soc, (struct sockaddr *)&addr, sizeof(addr));
 
 	  if (res < 0) { 
 	     if (errno == EINPROGRESS) { 
@@ -231,31 +231,36 @@ int connectTo(char *host, int port) {
 	  fcntl(soc, F_SETFL, arg); 
 	  // I hope that is all 
 	  printf("[Server] Connection successful!\n");
-	  return 1;
+
+	  if( send(soc, value, sizeof(16), 0) < 0) {
+	  		printf("sent %s to socket... ", value);
+	  }
+
+	  return soc;
 }
 
-int checkPrimary(char primaryIP[], char myIP[]) {
-
-	int replicaSocket;
+int checkPrimary(int socket, char primaryIP[], char myIP[]) {
+	
 	int isConnected = -1;
 	char *ip = malloc(16);
 	strcpy(ip, myIP);
 	int bytesEnviados = 0;
 
-	replicaSocket = connectTo(primaryIP, 53001);
-	if (replicaSocket == -1){
-		printf("replicaSocket returned -1\n");
-		return -2;
-	}
+	// replicaSocket = connectTo(primaryIP, 53001);
+	// if (replicaSocket == -1){
+		// printf("replicaSocket returned -1\n");
+		// return -2;
+	// }
 	
-	send(replicaSocket, ip, strlen(ip), 0); // handshake
-    recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
+	// send(replicaSocket, ip, strlen(ip), 0); // handshake
+    // recv(replicaSocket, &isConnected, sizeof(isConnected), 0); // Recebe o aval do servidor primario
 
-    if (isConnected == -1) {
-    	printf("sent.\n");
-    	if (send(replicaSocket, ip, strlen(ip), 0))
-    		printf("sent 2.\n");
-    }
+    // if( send(replicaSocket , ip , strlen(ip) , 0) < 0)
+    // {
+    //     puts("Send failed...");
+    //     return -2;
+    // }
+    // puts("IP Sent...\n");
 
 	return isConnected;
 }

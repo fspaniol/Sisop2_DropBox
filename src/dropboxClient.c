@@ -31,6 +31,7 @@
 #endif
 
 int semaforo = 0;
+int serverStatus = 1;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
 
@@ -48,10 +49,18 @@ void *daemonMain(void *parametros){
         semaforo = 1;
         printf("[DAEMON] Synchronizing the folder \n");
         sync_client(socketCliente);
-        printf("[DAEMON] Synchronization done \n");
-        semaforo = 0;
-        sleep(10);
 
+        if (serverStatus == 0) {
+
+	        printf("[DAEMON] Synchronization done \n");
+	        semaforo = 0;
+	        sleep(10);
+
+    	} else {
+    		printf("[DAEMON] Synchronization error. Server is down.\n");
+    		lookForServer();
+
+    	}
     }
 
     return 0;
@@ -76,6 +85,11 @@ void sync_client(int socketCliente){
     send(socketCliente,&opcao,sizeof(opcao),0); // Informa o servidor qual a opção que ele vai realizar
 
     bytesRecebidos = recv(socketCliente, clientFiles, sizeof(clientFiles), 0);
+
+    if (bytesRecebidos < 0) {
+    	serverStatus = -1;
+    	return;
+    }
 
     if (strcmp("You have no files!",clientFiles) == 0)
         return;
@@ -397,12 +411,82 @@ void close_connection(int socket){
     
 }
 
+int receiveServerList(int socket) {
+	char buffer[TAM_MAX]; // buffer
+    FILE* handler; // handler do arquivo
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+
+    bzero(buffer, TAM_MAX);
+
+    if ((send(socket,buffer,sizeof(buffer),0)) < 0){ // Envia o nome do arquivo que deseja receber pro Servidor
+        puts("[ERROR] Error while sending the filename...");
+        exit(1);
+    }
+    if( access( buffer, F_OK ) != -1 ) {
+        handler = fopen("RMFile.txt","w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+
+        bzero(buffer, TAM_MAX);
+
+        while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
+            if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+                puts("[ERROR] Error when receiving server list.");
+            }
+
+            fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+            bzero(buffer, TAM_MAX);
+
+            if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+                fclose(handler);
+                return 0;
+            }
+        }
+        return -1;
+    }else{
+        puts("[ERROR] File not found.");
+        return -1;
+    }
+}
+
+void lookForServer() {
+
+    char *serverIP;
+    int foundServer = 0;
+    int testSocket;
+    int index = 0;
+
+	printf("Will look for new server...\n");
+	do {
+		printf("entrou\n");
+		serverIP = getAddressByIndex(index);
+		printf("passou serverIP\n");
+		if ((serverIP == NULL) || (strlen(serverIP) < 7)) {
+			printf("Could not find any active server.\n");
+			printf(" Terminating...\n");
+			return;
+		}
+
+		printf("[Server] Will try to connect to %s at 53000 . . .\n", serverIP);
+		// replicaSocket = criaSocketServidor(argv[1], 53001);
+		testSocket = connectTo(serverIP, 53000, "Hello");
+
+		if (testSocket != -1) {
+			foundServer = 1;
+		}
+
+		index++;
+	} while (!foundServer);
+
+	printf("Found server online at %s\n", serverIP);
+}
+
 int main(int argc, char *argv[]){
     
     int socketCliente;
     int opcao = 1;
     int opcao_convertida;
     char* usuario;
+    char* serverList = malloc(TAM_MAX);
     pthread_t daemon;
 
     if (argc < 3) {
@@ -412,25 +496,49 @@ int main(int argc, char *argv[]){
 
     socketCliente = connect_server(argv[2],53000);
 
-
     send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
 
     recv(socketCliente,&opcao,sizeof(opcao),0); // Recebe o aval do servidor
 
     if (opcao == 0){
-        puts("Este usuario ja possui 2 conexoes abertas, desconectando...");
+        puts("[ERROR] This user already has two active connections. Aborting...");
         return 0;
     }
 
+    // Server está de boas
+    serverStatus = 0;
+
     if (pthread_create(&daemon,NULL,daemonMain, &socketCliente)){
-        puts("[ERROR] Error trying to create a Daemon thread ");
+        puts("[ERROR] Error trying to create a Daemon thread.");
         return 0;
+    }
+
+    strcpy(serverList, readRMFile());
+    printf("debug 1\n");
+    if (serverList == NULL) {
+    	printf("[Client] Could not find server list. Will ask one to server.\n");
+    	opcao = 7;
+    	opcao_convertida = htonl(opcao);
+    	send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0);
+    	
+    	if (receiveServerList(socketCliente) < 0) {
+    		printf("[Client] Could not receive server list.\n");
+    	} else {
+    		printf("[Client] Successfully received server list.\n");
+    	}
+
+    } else {
+    	printf("[Client] Found server list. \n");
     }
 
     while (opcao != 0){
 
         while (semaforo == 1){
             
+        }
+
+        if (serverStatus != 0) {
+        	lookForServer();
         }
 
         imprimir_menu(argv[1]);

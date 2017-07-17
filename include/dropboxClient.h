@@ -34,4 +34,6 @@ void get_file_sync(int socket, char* arquivo); // Recebe arquivos quando sincron
 
 int getTimeServer(); // Recebe o horário local do servidor
 
+void lookForServer(); // Abre o rmfile e vê o próximo server online
+
 #endif /* dropboxClient_h */

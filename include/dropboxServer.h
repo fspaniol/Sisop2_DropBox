@@ -53,6 +53,19 @@ int conta_conexoes_usuario(char *usuario); // Conta as conexoes presentes para u
 
 void send_time_modified(int socket, char* usuario); // Envia a data quando o arquivo foi modificado
 
+// REPLICA MANAGER
+
+void send_ServerList(int socket, char* usuario); // Envia para o cliente a lista de servers
+
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
+
+void initializePrimary(int argc, char *argv[], int sckt); // Inicializa o server como server primário
+
+void primaryLoop(int socketServidor); // Abre o loop de recebimento do servidor
+
+void initializeReplica(int argc, char *argv[], int sckt); // Inizializa o server como replica
+
+void replicaLoop(int socketServidor); // Abre o loop da replica, que ouve o primario
+
 
 #endif /* dropboxServer_h */
