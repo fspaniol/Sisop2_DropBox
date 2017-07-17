@@ -6,18 +6,21 @@
 //
 //
 
-
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <dirent.h>
 #include <time.h>
-#include <fcntl.h> 
-#include <unistd.h> 
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <arpa/inet.h> 
-#include <sys/stat.h> 
+
 
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
@@ -26,6 +29,9 @@
 
 struct Client clientes[10];
 int semaforo = 0;
+const SSL_METHOD *method;
+SSL_CTX *ctx;
+SSL *ssl;
 //Cria o socket do servidor
 
 int criaSocketServidor(char *host, int port){
@@ -94,7 +100,8 @@ void *atendeCliente(void *indice){
     int flag = 1;
     flag = htonl(flag);
 
-    recv(clientes[index].devices[0],  clientes[index].userid, sizeof(usuario), 0); // Recebe o numero do usuario
+    //recv(clientes[index].devices[0],  clientes[index].userid, sizeof(usuario), 0); // Recebe o numero do usuario
+    SSL_read(clientes[index].socket,clientes[index].userid, sizeof(usuario));
 
     conexoes = conta_conexoes_usuario(clientes[index].userid);
 
@@ -102,34 +109,37 @@ void *atendeCliente(void *indice){
         printf("[Server][User: %s] The user already has 2 connections open, closing this one... \n", clientes[index].userid);
         flag = 0;
         flag = htonl(flag);
-        send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+        //send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+        SSL_write(clientes[index].socket, &flag, sizeof(flag));
         clientes[index].logged_in = 0;
         return 0;
     }
     cria_pasta_usuario(clientes[index].userid);
-    send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+    //send(clientes[index].devices[0], &flag, sizeof(flag), 0); // Envia o aval dizendo que ja recebeu
+    SSL_write(clientes[index].socket,&flag,sizeof(flag));
         
     while (opcao_recebida != 0){ // enquanto a opção do cliente não for sair da conexao, ele fica atendendo esse cliente
         opcao_recebida = 8;
         //puts("Estou esperando acao de algum cliente... \n");
             
-        recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
+        //recv(clientes[index].devices[0], &opcao_recebida, sizeof(opcao_recebida), 0); // recebe do usuario que opção ele quer
+        SSL_read(clientes[index].socket,&opcao_recebida,sizeof(opcao_recebida));
         opcao_recebida = htonl(opcao_recebida);
             
         switch(opcao_recebida) {
             case 1: sync_server();
                 break;
-            case 2: receive_file(clientes[index].devices[0], clientes[index].userid);
+            case 2: receive_file(clientes[index].socket, clientes[index].userid);
                 break;
-            case 3: send_file_servidor(clientes[index].devices[0], clientes[index].userid);
+            case 3: send_file_servidor(clientes[index].socket, clientes[index].userid);
                 break;
-            case 4: list_files_server(clientes[index].devices[0], clientes[index].userid);
+            case 4: list_files_server(clientes[index].socket, clientes[index].userid);
                 break;
-            case 5: send_time_modified(clientes[index].devices[0], clientes[index].userid);
+            case 5: send_time_modified(clientes[index].socket, clientes[index].userid);
                 break;
-            case 6: receive_file_sync(clientes[index].devices[0], clientes[index].userid);
+            case 6: receive_file_sync(clientes[index].socket, clientes[index].userid);
                 break;
-            case 7: send_time(clientes[index].devices[0], clientes[index].userid);
+            case 7: send_time(clientes[index].socket, clientes[index].userid);
                 break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -147,7 +157,7 @@ void sync_server() {
 }
 // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
-void receive_file(int socket, char* usuario){
+void receive_file(SSL *socket, char* usuario){
    	printf("[Server][User: %s] Server will receive file from client.\n", usuario);
     char buffer[TAM_MAX]; // Buffer que armazena os pacotes que vem sido recebidos
     ssize_t bytesRecebidos = 0; // Quantidade de bytes que foram recebidos numa passagem
@@ -160,12 +170,14 @@ void receive_file(int socket, char* usuario){
     strcat(diretorio,usuario);
     strcat(diretorio,"/");
 
-    while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    //while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    while((bytesRecebidos = SSL_read(socket, buffer, sizeof(buffer))) < 0){
     }
 
     printf("[Server][User: %s] The file to be sent by client is: %s\n", usuario, buffer); // Escreve o nome do arquivo
     
-    if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+    //if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+    if ((bytesEnviados = SSL_write(socket, &flag, sizeof(flag))) < 0){
         printf("[ERROR ][User: %s] Error sending acknowledgement to client for file receiving.", usuario); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
         return;
     }
@@ -178,7 +190,8 @@ void receive_file(int socket, char* usuario){
 
     bzero(buffer, TAM_MAX); // Reseta o buffer
 
-    while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+    //while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+    while ((bytesRecebidos = SSL_read(socket, buffer, TAM_MAX)) > 0){
     	if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
        		printf("[ERROR ][User: %s] Error when trying to receive client package.\n", usuario);
             fclose(handler);
@@ -208,7 +221,7 @@ void receive_file(int socket, char* usuario){
     }
 }
 
-void receive_file_sync(int socket, char* usuario){
+void receive_file_sync(SSL *socket, char* usuario){
     printf("[Server][User: %s] Server will receive file from client.\n", usuario);
     char buffer[TAM_MAX]; // Buffer que armazena os pacotes que vem sido recebidos
     ssize_t bytesRecebidos = 0; // Quantidade de bytes que foram recebidos numa passagem
@@ -223,12 +236,14 @@ void receive_file_sync(int socket, char* usuario){
     struct stat *time_modified = malloc(sizeof(struct stat));
     time_t horario_modificado;
 
-    while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    //while((bytesRecebidos = recv(socket, buffer, sizeof(buffer),0)) < 0){ // recebe o nome do arquivo que vai receber do cliente
+    while((bytesRecebidos = SSL_read(socket, buffer, sizeof(buffer))) < 0){
     }
 
     printf("[Server][User: %s] The file to be sent by client is: %s\n", usuario, buffer); // Escreve o nome do arquivo
     
-    if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+    //if ((bytesEnviados = send(socket, &flag, sizeof(flag), 0)) < 0){
+    if ((bytesEnviados = SSL_write(socket, &flag, sizeof(flag))) < 0){
         printf("[ERROR ][User: %s] Error sending acknowledgement to client for file receiving.", usuario); // Envia uma flag dizendo pro cliente que ta tudo pronto e a transferencia do conteudo do arquivo pode começar
         return;
     }
@@ -241,7 +256,8 @@ void receive_file_sync(int socket, char* usuario){
 
     bzero(buffer, TAM_MAX); // Reseta o buffer
 
-    while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+    //while ((bytesRecebidos = recv(socket, buffer, TAM_MAX, 0)) > 0){  // Enquanto tiver coisa sendo lida, continua lendo
+    while ((bytesRecebidos = SSL_read(socket, buffer, TAM_MAX)) > 0){
         if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
             printf("[ERROR ][User: %s] Error when trying to receive client package.\n", usuario);
             fclose(handler);
@@ -270,7 +286,8 @@ void receive_file_sync(int socket, char* usuario){
             lstat(diretorio,time_modified);
             horario_modificado = time_modified->st_mtime;
 
-            bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+            //bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+            bytesRecebidos = SSL_write(socket,&horario_modificado,sizeof(horario_modificado));
             return;
         }
     }
@@ -283,7 +300,7 @@ void receive_file_sync(int socket, char* usuario){
 
 // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
-void send_file_servidor(int socket, char* usuario){
+void send_file_servidor(SSL *socket, char* usuario){
 
     char diretorio[200] = "sync_dir_";
     strcat(diretorio,usuario);
@@ -299,7 +316,8 @@ void send_file_servidor(int socket, char* usuario){
 
     bzero(buffer,TAM_MAX);
 
-    bytesRecebidos = recv(socket, buffer, TAM_MAX, 0); // recebe o nome do arquivo que o cliente quer receber
+    //bytesRecebidos = recv(socket, buffer, TAM_MAX, 0); // recebe o nome do arquivo que o cliente quer receber
+    bytesRecebidos = SSL_read(socket, buffer, TAM_MAX);
     if (bytesRecebidos < 0)
         printf("[ERROR ][[User: %s]] Error receiving the filename to be sent. \n", usuario);
     else
@@ -314,7 +332,8 @@ void send_file_servidor(int socket, char* usuario){
     }
 
     while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
-        if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+        //if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+        if ((bytesEnviados = SSL_write(socket,buffer,bytesLidos)) < bytesLidos) {
             printf("[ERROR ][User: %s] Error sending the file.", usuario);
             return;
         }
@@ -324,17 +343,18 @@ void send_file_servidor(int socket, char* usuario){
     fclose(handler);
 }
 
-void send_time(int socket, char* usuario){
+void send_time(SSL *socket, char* usuario){
     time_t horario;
 
     time(&horario);
-    send(socket,&horario,sizeof(horario),0);
+    //send(socket,&horario,sizeof(horario),0);
+    SSL_write(socket,&horario,sizeof(horario));
 
     printf("[SERVER][User: %s] Enviado o atual horario. \n", usuario);
 }
 
 
-void send_time_modified(int socket, char* usuario){
+void send_time_modified(SSL *socket, char* usuario){
     char buffer[TAM_MAX];
     struct stat *horario = malloc(sizeof(struct stat));
     char diretorio[200] = "sync_dir_";
@@ -343,7 +363,8 @@ void send_time_modified(int socket, char* usuario){
     ssize_t bytesRecebidos;
     time_t horario_modificado;
 
-    bytesRecebidos = recv(socket, buffer, TAM_MAX, 0);
+    //bytesRecebidos = recv(socket, buffer, TAM_MAX, 0);
+    bytesRecebidos = SSL_read(socket,buffer,TAM_MAX);
 
     strcat(diretorio,buffer);
 
@@ -354,12 +375,13 @@ void send_time_modified(int socket, char* usuario){
     
     horario_modificado = horario->st_mtime;
 
-    bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+    //bytesRecebidos = send(socket,&horario_modificado,sizeof(horario_modificado),0);
+    bytesRecebidos = SSL_write(socket,&horario_modificado,sizeof(horario_modificado));
 
 }
 
 
-void list_files_server(int socket, char* usuario) {
+void list_files_server(SSL *socket, char* usuario) {
     
     DIR *dir;
     struct dirent *ent;
@@ -389,7 +411,8 @@ void list_files_server(int socket, char* usuario) {
         
         closedir (dir);
 
-        if ((bytesEnviados = send(socket, userFiles, TAM_MAX, 0)) < 0) {
+        //if ((bytesEnviados = send(socket, userFiles, TAM_MAX, 0)) < 0) {
+        if ((bytesEnviados = SSL_write(socket, userFiles,TAM_MAX)) < 0) {
             printf("[ERROR ][User: %s] Error sending files list.", usuario);
             return;
         }
@@ -408,18 +431,34 @@ int updateReplicas(){
     return 0;
 }
 
+// Inicializa as bibliotecas de SSL
+
+void initializeSSL(){
+	SSL_library_init();
+    SSL_load_error_strings();
+    OpenSSL_add_all_algorithms();
+}
+
 
 // Setando a conexão TCP com o cliente
 
 int main(int argc, char *argv[]){
     
-    int socketServidor;
+    int socketServidor, socketCliente;
     struct sockaddr_storage depositoServidor[10];
     socklen_t tamanhoEndereco[10];
     pthread_t threads[10];
     pthread_t daemon;
     int cont = 0;
     int cont2;
+
+	initializeSSL();
+    method = SSLv23_server_method();
+	ctx = SSL_CTX_new(method);
+    if (ctx == NULL){
+		ERR_print_errors_fp(stderr);
+		abort();
+	}
 
     for (int x = 0; x < 10; x++)
         clientes[x].logged_in = 0;
@@ -431,7 +470,10 @@ int main(int argc, char *argv[]){
         socketServidor = criaSocketServidor(argv[1],53000);
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
     }
-    
+
+
+	SSL_CTX_use_certificate_file(ctx,"CertFile.pem",SSL_FILETYPE_PEM);
+	SSL_CTX_use_PrivateKey_file(ctx,"KeyFile.pem",SSL_FILETYPE_PEM);
 
     // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
     // O segundo parametro do listen diz quantas conexões podemos ter
@@ -445,9 +487,17 @@ int main(int argc, char *argv[]){
         }
 
         tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
-        clientes[cont].devices[0] = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        socketCliente = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
         puts("[Server] Client connected...");
-        
+		// Associa o socket ao SSL
+		ssl = SSL_new(ctx);
+		SSL_set_fd(ssl,socketCliente);
+		int ssl_err = SSL_accept(ssl);
+		if (ssl_err <= 0){
+			printf("[Error] SSL could not bind to the socket! \n");
+//			return 0;
+		}
+        clientes[cont].socket = ssl;
 
         clientes[cont].logged_in = 1;
         cont2 = cont; // Uma cópia para mandar para a thread, pois se mandasse a mesma variavel, ela seria alterada pela main antes de a thread secundaria pegar
