@@ -412,7 +412,7 @@ void list_files_server(SSL *socket, char* usuario) {
         closedir (dir);
 
         //if ((bytesEnviados = send(socket, userFiles, TAM_MAX, 0)) < 0) {
-        if ((bytesEnviados = SSL_WRITE(socket, userFiles,TAM_MAX)) < 0) {
+        if ((bytesEnviados = SSL_write(socket, userFiles,TAM_MAX)) < 0) {
             printf("[ERROR ][User: %s] Error sending files list.", usuario);
             return;
         }

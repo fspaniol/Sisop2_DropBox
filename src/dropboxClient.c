@@ -44,11 +44,6 @@ SSL_CTX *ctx;
 SSL *ssl;
 
 void *daemonMain(void *parametros){
-
-    //SSL *temp = (SSL *) parametros;
-    //SSL socketCliente = *temp;
-    SSL *socketCliente = (SSL *) parametros;
-
     printf("\n [DAEMON] Daemon thread initialized \n");
 
     while (1){
@@ -57,8 +52,8 @@ void *daemonMain(void *parametros){
         }
         semaforo = 1;
         printf("[DAEMON] Synchronizing the folder \n");
-        getTimeServer(socketCliente);
-        sync_client(socketCliente);
+        getTimeServer(ssl);
+        sync_client(ssl);
         printf("[DAEMON] Synchronization done \n");
         semaforo = 0;
         sleep(10);
@@ -75,7 +70,6 @@ void getTimeServer(SSL *socketCliente){
 
     int opcao = 7;
     opcao = htonl(opcao);
-
     time(&horario_envio);
     //send(socketCliente,&opcao,sizeof(opcao),0);
     SSL_write(socketCliente,&opcao,sizeof(opcao));
@@ -506,10 +500,11 @@ int main(int argc, char *argv[]){
 	}
     }
 
-    SSL_write(ssl,argv[1],0);
+    SSL_write(ssl,argv[1],sizeof(argv[1]));
     //send(socketCliente,argv[1],sizeof(argv[1]),0); // Envia o nome do usuario para o servidor
 
     SSL_read(ssl,&opcao,sizeof(opcao));
+
     //recv(socketCliente,&opcao,sizeof(opcao),0); // Recebe o aval do servidor
 
     if (opcao == 0){
@@ -537,7 +532,7 @@ int main(int argc, char *argv[]){
         semaforo = 1;
         
         //send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0); // Informa o servidor qual a opção que ele vai realizar
-        SSL_WRITE(ssl,&opcao_convertida,sizeof(opcao_convertida));
+        SSL_write(ssl,&opcao_convertida,sizeof(opcao_convertida));
         switch(opcao) {
             case 1: 
                 sync_client(ssl);
@@ -552,7 +547,7 @@ int main(int argc, char *argv[]){
                 list_files(ssl);
                 break;
             case 0: 
-                close_connection(ssl);         
+                close_connection(socketCliente);         
         }
 
         semaforo = 0;
