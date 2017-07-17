@@ -5,7 +5,7 @@ SRC_DIR= ./src
 all: 	client server	
 debug:	clientDebug serverDebug
 
-client: clientssl: $(SRC_DIR)/dropboxClient.c
+client: $(SRC_DIR)/dropboxClient.c
 	$(CC) -o client $(SRC_DIR)/dropboxClient.c -lpthread -lssl -lcrypto
 
 server: $(SRC_DIR)/dropboxServer.c
