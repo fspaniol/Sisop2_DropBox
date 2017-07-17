@@ -8,25 +8,24 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <pthread.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
-#include <fcntl.h> 
-#include <unistd.h> 
-#include <arpa/inet.h>  
-
-///////////////////
-#include <sys/types.h>
+#include <netdb.h>
+#include <errno.h>
+#include <libgen.h>
+#include <sys/stat.h>
+#include <time.h>
 #include <dirent.h>
-///////////////////
+#include <openssl/err.h>
+#include <openssl/ssl.h>
+#include <arpa/inet.h> 
 
 #include "../include/dropboxClient.h"
 #include "dropboxUtil.c"
-#include <sys/stat.h>
-#include "openssl/bio.h"
-#include "openssl/ssl.h"
-#include "openssl/err.h"
-#include <openssl/ssl.h>
 
 #define TAM_MAX 1024
 
@@ -34,11 +33,13 @@
 #include <stdio_ext.h>
 #endif
 
+
+
 int semaforo = 0;
 time_t ultimo_sync = 0;
 time_t ultimo_sync_parcial = 0;
 time_t diferenca;
-SSL_METHOD *method;
+const SSL_METHOD *method;
 SSL_CTX *ctx;
 SSL *ssl;
 
@@ -448,11 +449,6 @@ int main(int argc, char *argv[]){
     char* usuario;
     pthread_t daemon;
 
-    if (argc < 3) {
-        printf("[Client] Please, insert your login and the desired IP to connect...\n");
-        exit(0);
-    }
-
     initializeSSL();
     method = SSLv23_client_method();
     ctx = SSL_CTX_new(method);
@@ -460,10 +456,13 @@ int main(int argc, char *argv[]){
         ERR_print_errors_fp(stderr);
         abort();
     } 
+	
 
+    if (argc < 3) {
+        printf("[Client] Please, insert your login and the desired IP to connect...\n");
+        exit(0);
+    }
     socketCliente = connect_server(argv[2],53000);
-
-	sleep(1);
 
 
     ssl = SSL_new(ctx);

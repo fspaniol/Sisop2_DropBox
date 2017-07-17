@@ -6,22 +6,21 @@
 //
 //
 
-
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
 #include <dirent.h>
 #include <time.h>
-#include <fcntl.h> 
-#include <unistd.h> 
-#include <arpa/inet.h> 
-#include <sys/stat.h> 
-#include "openssl/bio.h"
-#include "openssl/ssl.h"
-#include "openssl/err.h"
+#include <openssl/err.h>
 #include <openssl/ssl.h>
+#include <arpa/inet.h> 
+
 
 #include "../include/dropboxServer.h"
 #include "dropboxUtil.c"
@@ -30,7 +29,7 @@
 
 struct Client clientes[10];
 int semaforo = 0;
-SSL_METHOD *method;
+const SSL_METHOD *method;
 SSL_CTX *ctx;
 SSL *ssl;
 //Cria o socket do servidor
@@ -436,6 +435,14 @@ int main(int argc, char *argv[]){
     int cont = 0;
     int cont2;
 
+	initializeSSL();
+    method = SSLv23_server_method();
+	ctx = SSL_CTX_new(method);
+    if (ctx == NULL){
+		ERR_print_errors_fp(stderr);
+		abort();
+	}
+
     for (int x = 0; x < 10; x++)
         clientes[x].logged_in = 0;
 
@@ -446,14 +453,6 @@ int main(int argc, char *argv[]){
         socketServidor = criaSocketServidor(argv[1],53000);
         printf("[Server] Hosting server at %s : 53000.\n", argv[1]);
     }
-
-	initializeSSL();
-    method = SSLv23_server_method();
-	ctx = SSL_CTX_new(method);
-    if (ctx == NULL){
-		ERR_print_errors_fp(stderr);
-		abort();
-	}
 
 
 	SSL_CTX_use_certificate_file(ctx,"CertFile.pem",SSL_FILETYPE_PEM);
@@ -479,7 +478,7 @@ int main(int argc, char *argv[]){
 		int ssl_err = SSL_accept(ssl);
 		if (ssl_err <= 0){
 			printf("[Error] SSL could not bind to the socket! \n");
-			return 0;
+//			return 0;
 		}
 
         clientes[cont].logged_in = 1;
