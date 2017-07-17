@@ -27,6 +27,12 @@ struct Client{
     int logged_in;                  // Cliente está logado ou não
 };
 
+struct Replica{
+	int binded;						// Pra dizer se a replica está ok
+	char ip[16];					// IP da replica
+	int pid;						// PID da replica (caso a gente faça um algoritmo de eleição de líder)
+};
+
 int criaSocketServidor(char *host, int port); // Cria o socket do servidor
 
 void sync_server();                 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
@@ -49,8 +55,20 @@ void send_time_modified(SSL *socket, char* usuario); // Envia a data quando o ar
 
 void send_time(SSL *socket, char* usuario); // Envia a hora local do server para o outro lado
 
+// REPLICA MANAGER
+
+void send_ServerList(int socket, char* usuario); // Envia para o cliente a lista de servers
+
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
 void initializeSSL(); // Inicializa e inclui as bibliotecas do SSL
+
+void initializePrimary(int argc, char *argv[], int sckt); // Inicializa o server como server primário
+
+void primaryLoop(int socketServidor); // Abre o loop de recebimento do servidor
+
+void initializeReplica(int argc, char *argv[], int sckt); // Inizializa o server como replica
+
+void replicaLoop(int socketServidor); // Abre o loop da replica, que ouve o primario
 
 #endif /* dropboxServer_h */

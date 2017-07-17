@@ -38,4 +38,6 @@ void algoritmo_cristian(); // Calcula o horario do server com o algoritmo de cri
 
 void initializeSSL(); // Inicializa e inclui as bibliotecas do SSL
 
+void lookForServer(); // Abre o rmfile e vê o próximo server online
+
 #endif /* dropboxClient_h */
