@@ -21,7 +21,7 @@ struct file_info{
 };
 
 struct Client{
-    int devices[2];                 // Associado aos dispositivos do usuário
+    SSL *socket;                 // Associado aos dispositivos do usuário
     char userid[MAXNAME];           // Id do usuário no servidor, que deverá ser único. Informado pela linha de comando
     struct file_info files[MAXFILES]; // Metadados de cada arquivo que o cliente possui no servidor
     int logged_in;                  // Cliente está logado ou não
@@ -31,13 +31,13 @@ int criaSocketServidor(char *host, int port); // Cria o socket do servidor
 
 void sync_server();                 // Sincroniza o servidor com o diretório "sync_dir_<nomeusuário>" com o cliente
 
-void receive_file(int socket, char* usuario);      // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
+void receive_file(SSL *socket, char* usuario);      // Recebe um arquivo file do cliente. Deverá ser executada quando for realizar upload de um arquivo. file - path/filename.ext do arquivo a ser recebido
 
-void receive_file_sync(int socket, char* usuario); // Recebe o arquivo e envia de volta o tempo no qual foi modificado
+void receive_file_sync(SSL *socket, char* usuario); // Recebe o arquivo e envia de volta o tempo no qual foi modificado
 
-void send_file_servidor(int socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
+void send_file_servidor(SSL *socket, char* usuario);         // Envia o arquivo file para o usuário. Deverá ser executada quando for realizar download de um arquivo. file - filename.ext
 
-void list_files_server(int socket, char* usuario); // Lista todos os files do diretório de cada usuário
+void list_files_server(SSL *socket, char* usuario); // Lista todos os files do diretório de cada usuário
 
 void cria_pasta_usuario(char* usuario); // Cria uma pasta no servidor para o usuario passado como parametro
 
@@ -45,9 +45,9 @@ void *atendeCliente(void *indice); // Menu principal para atender a cada usuario
 
 int conta_conexoes_usuario(char *usuario); // Conta as conexoes presentes para um usuario
 
-void send_time_modified(int socket, char* usuario); // Envia a data quando o arquivo foi modificado
+void send_time_modified(SSL *socket, char* usuario); // Envia a data quando o arquivo foi modificado
 
-void send_time(int socket, char* usuario); // Envia a hora local do server para o outro lado
+void send_time(SSL *socket, char* usuario); // Envia a hora local do server para o outro lado
 
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
