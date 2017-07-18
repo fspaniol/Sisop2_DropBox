@@ -15,7 +15,7 @@
 
 #include "../include/dropboxUtil.h"
 
-#define	EINPROGRESS	36		/* Operation now in progress */
+//#define	EINPROGRESS	36		/* Operation now in progress */
 
 #if !defined(_SYS_ERRNO_H_)
 #define	_SYS_ERRNO_H_

@@ -145,7 +145,7 @@ void *atendeCliente(void *indice){
                 break;
             case 7: send_time(clientes[index].socket, clientes[index].userid);
                 break;
-            case 7: send_ServerList(clientes[index].devices[0], clientes[index].userid);
+            case 8: send_ServerList(clientes[index].socket, clientes[index].userid);
             	break;
             case 0: printf("[Server][User: %s] Client %d disconnected.\n", clientes[index].userid, index);
         }          
@@ -359,7 +359,7 @@ void send_time(SSL *socket, char* usuario){
     printf("[SERVER][User: %s] Enviado o atual horario. \n", usuario);
 }
 
-void send_ServerList(int socket, char* usuario) {
+void send_ServerList(SSL *socket, char* usuario) {
 
     printf("[Server][User: %s] Server will send the server list... \n", usuario);
 
@@ -377,7 +377,7 @@ void send_ServerList(int socket, char* usuario) {
     }
 
     while ((bytesLidos = fread(buffer, 1,sizeof(buffer), handler)) > 0){ // Enquanto o sistema ainda estiver lendo bytes, o arquivo nao terminou
-        if ((bytesEnviados = send(socket,buffer,bytesLidos,0)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
+        if ((bytesEnviados = SSL_write(socket, buffer,bytesLidos)) < bytesLidos) { // Se a quantidade de bytes enviados, não for igual a que a gente leu, erro
             printf("[ERROR ][User: %s] Error sending the server list.", usuario);
             return;
         }
@@ -609,6 +609,7 @@ void primaryLoop(int socketServidor) {
     // O segundo parametro do listen diz quantas conexões podemos ter
     socklen_t tamanhoEndereco[10];
     struct sockaddr_storage depositoServidor[10];
+    int socketCliente;
     pthread_t threads[10];
 	int cont = 0;
     int cont2;
@@ -734,7 +735,7 @@ int main(int argc, char *argv[]){
     pthread_t threads[10];
     pthread_t daemon;
     int cont = 0;
-    int cont2;
+    int cont2, opt;
 
 	initializeSSL();
     method = SSLv23_server_method();

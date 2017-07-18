@@ -614,7 +614,7 @@ int main(int argc, char *argv[]){
     printf("debug 1\n");
     if (serverList == NULL) {
     	printf("[Client] Could not find server list. Will ask one to server.\n");
-    	opcao = 7;
+    	opcao = 8;
     	opcao_convertida = htonl(opcao);
     	send(socketCliente,&opcao_convertida,sizeof(opcao_convertida),0);
     	

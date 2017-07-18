@@ -57,7 +57,7 @@ void send_time(SSL *socket, char* usuario); // Envia a hora local do server para
 
 // REPLICA MANAGER
 
-void send_ServerList(int socket, char* usuario); // Envia para o cliente a lista de servers
+void send_ServerList(SSL *socket, char* usuario); // Envia para o cliente a lista de servers
 
 int updateReplicas(); // Repassa as mudanças feitas no RM primário para os secundários
 
