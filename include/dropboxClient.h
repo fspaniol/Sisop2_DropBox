@@ -38,4 +38,6 @@ void algoritmo_cristian(); // Calcula o horario do server com o algoritmo de cri
 
 void initializeSSL(); // Inicializa e inclui as bibliotecas do SSL
 
+int receiveServerList(int socket); // Cliente recebe a lista de IPs do server, caso não tenha uma
+
 #endif /* dropboxClient_h */

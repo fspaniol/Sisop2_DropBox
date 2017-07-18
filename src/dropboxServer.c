@@ -426,11 +426,6 @@ void list_files_server(SSL *socket, char* usuario) {
     printf("[SERVER][User: %s] Done! Client's directory successfully read and sent.\n", usuario);
 }
 
-int updateReplicas(){
-
-    return 0;
-}
-
 // Inicializa as bibliotecas de SSL
 
 void initializeSSL(){
@@ -439,6 +434,266 @@ void initializeSSL(){
     OpenSSL_add_all_algorithms();
 }
 
+// Funções do REPLICA MANAGER
+
+// Thread paralela que aguarda conexões de outras replicas
+void *listenForReplicas() {
+    int socketListener, cont = 0;
+    int isPrimaryServer = 0;
+    char *primaryIP;
+    struct sockaddr_storage depositoServidor[10];
+    char recvbuffer[6000];
+    int replica;    
+    // bzero(recvbuffer, 6000);
+    ssize_t bytesRecebidos = 0;
+    int connected = 0;
+    socklen_t tamanhoEndereco[10];
+    socketListener = criaSocketServidor(primaryIP, 53001);
+    printf("[Listnr] Listener initialized. Server is now listening for incoming replica connections...\n");
+    
+    while (1) {
+        
+        if ((listen(socketListener,10)) != 0){
+                printf("[ERROR] Listener is deaf. Something went wrong.\n");
+        }
+
+        tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
+        replica = accept(socketListener, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        // printf("[Listnr] Connection incoming: %s\n", );
+
+        send(socketListener, &isPrimaryServer, sizeof(isPrimaryServer), 0); // Avisa os requerintes de que este é o primary server
+        printf("sent %d to socket.\n", isPrimaryServer);
+
+        if (recv(socketListener, recvbuffer, 6000, 0) < 0) {
+            printf("[Listnr] Receive failed. (%s)\n", recvbuffer);
+            printf("error: %zd\n", recv(socketListener, recvbuffer, 6000, 0));
+            return 0;
+        }
+
+        if (recvbuffer[0] == '\0'){
+            printf("[Listnr] Could not receive Replica IP: %s\n", recvbuffer);
+            return 0; 
+        }
+
+        char *buf = malloc(16);
+        strcpy(buf, recvbuffer);
+
+        printf("[Listnr] Replica %s connected to the primary server. [%d]\n", buf, cont);
+
+        cont++;
+    }
+    return 0;
+}
+
+// Propaga alteracoes para as outras replicas.
+// Retorno:
+//  0 se todas as replicas aceitaram as alteracoes normalmente
+//  1 se alguma replica nao pode aceitar as alteracoes
+int updateReplicas(int funcao, struct Client cliente){
+    int numberOfReplicas = 10; //temporario
+    int i = 0;
+    int timeout = 500; //temporario
+
+    for (i = 0; i < numberOfReplicas; i++) {
+        switch (funcao) {
+            case 1: //criaPastaUsuario
+                
+                if (timeout == 0)
+                    return 1;
+                break;
+
+            case 2: //sendFile (cliente -> server -> replicas)
+                if (timeout == 0)
+                    return 1;
+                break;
+
+            case 3: //sync
+                if (timeout == 0)
+                    return 1;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    //tudo certo ate aqui!
+        return 0;
+}
+
+void initializePrimary(int argc, char *argv[], int sckt) {
+    // Primary tem que verificar se existe um RMFile.txt e, caso não exista, criar um
+    pthread_t primaryListener;
+    FILE *handler;
+    char *buffer;
+    char *primaryIP;
+    char iplist[1024];
+    strcpy(iplist, argv[1]);
+    strcat(iplist, "\n");
+    strcpy(primaryIP, argv[1]);
+    int status = 0;
+
+    printf("[Server] Will look for IP list... \n");
+    handler = fopen("RMFile.txt","r");
+
+    if (handler != NULL) {
+        printf("[Server] Found RMFile. Will read: \n");
+        buffer = readRMFile();
+        printf("%s\n", buffer);
+        
+        status = isAddressInFile(primaryIP);
+        if (status == 0) {
+            printf("[Server] Found Primary IP in file. All good.\n");
+        }
+        
+        if (status == 1) {
+            printf("[Server] Primary IP not found in file. Writing... ");
+            if (addAddressRMFile(primaryIP) == 0) {
+                printf("Done.\n");
+            } else {
+                printf("Error.\n");
+            }
+        }
+
+    } else {
+        printf("[Server] Could not find RMFile. Creating a new one... \n");
+        if (createRMFile(iplist) == 0) {
+            printf("[Server] Successfully created a RMFile.\n");
+        } else {
+            printf("[Server] Could not create a RMFile.\n");
+        }
+    }
+
+    fclose(handler);
+
+    // Cria uma segunda thread que roda em paralelo e se comunica com os replica-managers
+    if (pthread_create(&primaryListener, NULL, listenForReplicas, 0)){
+        puts("[ERROR] Could not create replica listener thread.");
+        puts("[Server] Terminating...");
+        return;
+    }
+    primaryLoop(sckt);
+}
+
+void primaryLoop(int socketServidor) {
+    // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
+    // O segundo parametro do listen diz quantas conexões podemos ter
+    socklen_t tamanhoEndereco[10];
+    struct sockaddr_storage depositoServidor[10];
+    int socketCliente;
+    pthread_t threads[10];
+    int cont = 0;
+    int cont2;
+
+    while (1){
+        
+        printf("\n[Server] Server waiting for client...\n");
+        
+        if ((listen(socketServidor,10)) != 0){
+            printf("[ERROR] Server is full. Try again later.\n");
+        }
+
+        tamanhoEndereco[cont] = sizeof(depositoServidor[cont]);
+        socketCliente = accept(socketServidor, (struct sockaddr *) &depositoServidor[cont], &tamanhoEndereco[cont]);
+        puts("[Server] Client connected...");
+        // Associa o socket ao SSL
+        ssl = SSL_new(ctx);
+        SSL_set_fd(ssl,socketCliente);
+        int ssl_err = SSL_accept(ssl);
+        if (ssl_err <= 0){
+            printf("[Error] SSL could not bind to the socket! \n");
+        }
+        clientes[cont].socket = ssl;
+
+        clientes[cont].logged_in = 1;
+        cont2 = cont; // Uma cópia para mandar para a thread, pois se mandasse a mesma variavel, ela seria alterada pela main antes de a thread secundaria pegar
+        printf("[Server] Thread %d created \n", cont2+1);
+
+        if (pthread_create(&threads[cont],NULL,atendeCliente,&cont2)){
+            puts("[ERROR] Error trying to create a thread ");
+            return;
+        }
+
+        cont = 0;
+
+        while (clientes[cont].logged_in == 1){
+            printf("[Server] Client %d is logged, searching for next slot\n", cont+1);
+            cont++;
+            if (cont == 10)
+                cont = 0;
+        }
+        
+    }
+}
+
+void initializeReplica(int argc, char *argv[], int sckt) {
+    // Replica Manager deve ver se há um RMFile e buscar pelo servidor primário
+    FILE *handler;
+    char *buffer;
+    char *masterIP;
+    int replicaSocket;
+    int foundPrimary = 0;
+    int index = 1;
+    printf("[Server] Will look for IP list... \n");
+    handler = fopen("RMFile.txt", "r");
+
+    if (handler != NULL) {
+        printf("[Server] Found RMFile. Reading...\n");
+        buffer = readRMFile();
+        printf("%s\n", buffer);
+
+        do {
+            masterIP = getAddressByIndex(index);
+            if ((masterIP == NULL) || (strlen(masterIP) < 7)) {
+                printf("[Server] Could not find any active primary.\n");
+                printf("[Server] Terminating...\n");
+                return;
+            }
+
+            printf("[Server] Will try to connect to %s at 53001 . . .\n", masterIP);
+            // replicaSocket = criaSocketServidor(argv[1], 53001);
+            replicaSocket = connectTo(masterIP, 53001, argv[1]);
+
+            if (replicaSocket != -1) {
+                foundPrimary = 1;
+            }
+
+            index++;
+        } while (!foundPrimary);            
+
+        printf("[Server] This replica manager is currently responding to [%s]. \n", masterIP);
+        replicaLoop(replicaSocket);
+        return;
+
+    } else {
+        printf("[Server] Could not find a RMFile. Aborting... \n");
+        return;
+    }
+}
+
+void replicaLoop(int socketServidor) {
+    char *primaryIP;
+    // O servidor fica rodando para sempre e quando algum cliente aparece chama a função send_file para mandar algo
+    // O segundo parametro do listen diz quantas conexões podemos ter
+    socklen_t tamanhoEndereco[10];
+    struct sockaddr_storage depositoServidor[10];
+    pthread_t threads[10];
+    int cont = 0;
+    int cont2;
+    
+    // if( send(socketServidor, primaryIP, sizeof(16), 0) < 0)
+ //    {
+ //        printf("Send failed... (%s)", primaryIP);
+ //        return;
+ //    }
+ //    printf("IP (%s) Sent...\n", primaryIP);
+    printf("[Server] Replica is waiting for Primary...\n");
+    
+    while (1){
+        if (pingServer(primaryIP, socketServidor) == 0)
+            break;
+    }
+}
 
 // Setando a conexão TCP com o cliente
 
@@ -495,7 +750,6 @@ int main(int argc, char *argv[]){
 		int ssl_err = SSL_accept(ssl);
 		if (ssl_err <= 0){
 			printf("[Error] SSL could not bind to the socket! \n");
-//			return 0;
 		}
         clientes[cont].socket = ssl;
 

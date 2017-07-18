@@ -458,6 +458,44 @@ void initializeSSL(){
     OpenSSL_add_all_algorithms();
 }
 
+// Replica Manager - Cliente recebe a lista de IPs do server, caso não tenha uma
+int receiveServerList(int socket) {
+    char buffer[TAM_MAX]; // buffer
+    FILE* handler; // handler do arquivo
+    ssize_t bytesRecebidos; // Quantidade de bytes que foram recebidos numa passagem
+
+    bzero(buffer, TAM_MAX);
+
+    if ((send(socket,buffer,sizeof(buffer),0)) < 0){ // Envia o nome do arquivo que deseja receber pro Servidor
+        puts("[ERROR] Error while sending the filename...");
+        exit(1);
+    }
+    if( access( buffer, F_OK ) != -1 ) {
+        handler = fopen("RMFile.txt","w"); // Abre o arquivo no qual vai armazenar as coisas, por enquanto hard-coded "clienteRecebeu.txt"
+
+        bzero(buffer, TAM_MAX);
+
+        while ((bytesRecebidos = recv(socket, buffer, sizeof(buffer), 0)) > 0){
+            if (bytesRecebidos < 0) { // Se a quantidade de bytes recebidos for menor que 0, deu erro
+                puts("[ERROR] Error when receiving server list.");
+            }
+
+            fwrite(buffer, 1,bytesRecebidos, handler); // Escreve no arquivo
+
+            bzero(buffer, TAM_MAX);
+
+            if(bytesRecebidos < TAM_MAX){ // Se o pacote que veio, for menor que o tamanho total, eh porque o arquivo acabou
+                fclose(handler);
+                return 0;
+            }
+        }
+        return -1;
+    }else{
+        puts("[ERROR] File not found.");
+        return -1;
+    }
+}
+
 int main(int argc, char *argv[]){
     
     int socketCliente;
